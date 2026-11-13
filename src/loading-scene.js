@@ -33,7 +33,7 @@ const burstPieces = [
 ].map(([x,y,angle,kind], i) => `<g class="loader-confetti" style="--fly-x:${x}px;--fly-y:${y}px;--fly-rotate:${angle}deg;--piece-delay:${i % 3 * 15}ms">${kind === 'dot' ? '<circle r="6" />' : kind === 'pill' ? '<rect x="-6" y="-13" width="12" height="26" rx="6" />' : '<path d="M-5 0h10" />'}</g>`).join('');
 
 export default `
-<section id="service-loader" class="service-loader" data-stage="loading" data-mode="full" aria-label="Загрузка Журнала решений">
+<section id="service-loader" class="service-loader" data-stage="loading" data-mode="full" aria-label="Загрузка GigaTeams">
   <div class="loader-content">
     <div class="loader-stage">
       <div data-loader-scene class="loader-scene">
@@ -52,6 +52,7 @@ export default `
               <path class="loader-head-shape" d="M235 232c0-40 23-65 65-65s65 25 65 65v25c0 31-25 56-65 56s-65-25-65-56Z" />
               <path class="loader-hair" d="M235 232c-8-33 5-61 30-70 17-7 36-5 50-1 21-6 39 1 48 18 10 18 9 36 2 53l-6-25c-24 3-47-3-60-18-14 15-34 20-57 17Z" />
               <path class="loader-hair-line" d="M269 168c14 0 23 5 30 13M324 170c10 3 16 9 20 17" />
+              <g class="loader-blush" aria-hidden="true"><ellipse cx="258" cy="274" rx="16" ry="9" /><ellipse cx="342" cy="274" rx="16" ry="9" /></g>
               <g class="loader-face">
                 <path class="loader-eyebrow loader-eyebrow-left" d="M261 248c6-3 12-3 18 0" />
                 <path class="loader-eyebrow loader-eyebrow-right" d="M321 248c6-3 12-3 18 0" />
@@ -63,7 +64,7 @@ export default `
             </g>
             <text data-loader-progress class="loader-percent" x="300" y="227">0%</text>
           </g>
-          <g class="loader-burst" transform="translate(300 216)">
+          <g class="loader-burst" transform="translate(300 182)">
             <circle class="loader-burst-ring" r="43" />
             <path class="loader-puff" d="M-76-8C-100-32-79-62-52-54C-55-87-17-100 1-74C20-104 54-84 52-57C84-74 108-42 87-20C118 0 105 37 75 36C88 69 53 93 30 70C9 99-25 83-28 58C-61 77-89 50-72 26C-103 21-111-9-76-8Z" />
             ${burstPieces}
@@ -73,7 +74,7 @@ export default `
       </div>
       <div data-loader-title class="loader-reveal" aria-hidden="true">
         <span class="loader-brand-mark"><svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M10 23V9m3 13c8-1 10-5 10-12"/><circle cx="10" cy="25" r="4"/><circle cx="10" cy="7" r="4"/><circle cx="23" cy="7" r="4"/></svg></span>
-        <h1>Журнал решений</h1>
+        <h1>GigaTeams</h1>
         <p>Всё важное — вне головы.</p>
       </div>
     </div>

@@ -183,7 +183,7 @@ function App() {
   const theme = themePreference || (systemDark ? 'dark' : 'light');
   const themeAction = theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему';
   const [page, setPage] = useState(() => Object.keys(labels.page).includes(location.hash.slice(2)) ? location.hash.slice(2) : "meetings");
-  useEffect(() => { document.title = labels.page[page] + " · " + demo.name + " — Журнал решений"; }, [page]);
+  useEffect(() => { document.title = labels.page[page] + " · " + demo.name + " — GigaTeams"; }, [page]);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({ component: "all", team: "all", period: "all", platform: "all" });
   const [listTab, setListTab] = useState("all");
@@ -598,7 +598,7 @@ function App() {
   return <div className="app-shell">
     <aside ref={sidebarRef} id="workspace-navigation" className={'sidebar ' + (mobileOpen ? 'mobile-open' : '')} role={isMobile && mobileOpen ? 'dialog' : undefined} aria-modal={isMobile && mobileOpen ? true : undefined} aria-label="Навигация" aria-hidden={sidebarBlocked || undefined} inert={sidebarBlocked ? '' : undefined} tabIndex={-1}>
       <IconButton className="mobile-nav-close" variant="ghost" aria-label="Закрыть меню" icon={<X size={19}/>} onClick={() => setMobileOpen(false)}/>
-      <a href="#/meetings" className="brand" aria-label="Журнал решений — встречи" onClick={e => {e.preventDefault();navigate('meetings');}}><span className="brand-mark"><GitBranch size={22}/></span><span><span className="brand-name">Журнал решений</span><span className="brand-subtitle">Контекст имеет значение</span></span></a>
+      <a href="#/meetings" className="brand" aria-label="GigaTeams — встречи" onClick={e => {e.preventDefault();navigate('meetings');}}><span className="brand-mark"><GitBranch size={22}/></span><span><span className="brand-name">GigaTeams</span><span className="brand-subtitle">Контекст имеет значение</span></span></a>
       <nav className="nav-list" aria-label="Основная навигация">{[['meetings',MessageSquareText],['decisions',GitBranch],['review',Inbox],['analytics',TrendingUp]].map(([id,Icon]) => <button key={id} className={'nav-item ' + (page === id ? 'active' : '')} aria-label={labels.page[id]} title={labels.page[id]} aria-current={page === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={18}/><span className="nav-label">{labels.page[id]}</span>{id === 'review' && pending.length + unlinked.length > 0 && <span className="nav-count">{pending.length + unlinked.length}</span>}</button>)}</nav>
       <div className="sidebar-bottom"><button className={'nav-item ' + (page === 'integrations' ? 'active' : '')} aria-label="Интеграции" title="Интеграции" aria-current={page === 'integrations' ? 'page' : undefined} onClick={() => navigate('integrations')}><Plug size={18}/><span className="nav-label">Интеграции</span></button><div className="system-status" title="Руслан Каутаров"><span className="team-avatar" aria-hidden="true">РК</span><div><strong>Руслан Каутаров</strong></div></div></div>
     </aside>

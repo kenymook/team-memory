@@ -74,7 +74,7 @@ function fail() {
   cleanup();
   loader.dataset.stage = 'error';
   participants.forEach(participant => { participant.dataset.speaking = 'false'; });
-  say('Не удалось загрузить журнал. Проверьте соединение и попробуйте ещё раз.');
+  say('Не удалось загрузить GigaTeams. Проверьте соединение и попробуйте ещё раз.');
   progressBar?.setAttribute('aria-busy', 'false');
   skip.hidden = true;
   retry.hidden = false;
@@ -100,7 +100,7 @@ function requestSkip() {
   if (readyAt !== null) return finish();
   loader.dataset.mode = 'quick';
   skip.hidden = true;
-  say('Журнал загружается…');
+  say('GigaTeams загружается…');
 }
 
 function onKeyDown(event) {
@@ -127,9 +127,14 @@ function draw(now) {
     lastProgress = frame.progress;
     progressText.textContent = `${frame.progress}%`;
     progressBar?.setAttribute('aria-valuenow', String(frame.progress));
-    const scale = mode === 'full' ? 1 + 0.6 * frame.progress / 100 : 1;
+    const scale = mode === 'full' ? 1 + 1.15 * Math.pow(frame.progress / 100, 1.25) : 1;
     head.setAttribute('transform', `translate(300 290) scale(${scale}) translate(-300 -290)`);
     progressText.setAttribute('y', String(290 - 63 * scale));
+    const heat = mode === 'full' ? Math.pow(frame.progress / 100, 1.4) : 0;
+    const baseSkin = document.documentElement.dataset.theme === 'dark' ? [232, 223, 206] : [242, 231, 212];
+    const hotSkin = [229, 99, 107];
+    head.style.setProperty('--intro-skin-live', 'rgb(' + baseSkin.map((value, index) => Math.round(value + (hotSkin[index] - value) * heat)).join(',') + ')');
+    head.style.setProperty('--loader-blush', String(heat * 0.78));
   }
   const voices = speakingParticipants(frame.progress, elapsed, skipped ? 'quick' : mode);
   participants.forEach(participant => {
@@ -137,10 +142,10 @@ function draw(now) {
     participant.dataset.visible = String(voice?.visible || false);
     participant.dataset.speaking = String(frame.stage === 'loading' && voice?.speaking || false);
   });
-  if (skipped || mode === 'quick') say('Журнал загружается…');
-  else if (frame.stage !== 'loading') say('Журнал готов');
+  if (skipped || mode === 'quick') say('GigaTeams загружается…');
+  else if (frame.stage !== 'loading') say('GigaTeams готов');
   else if (frame.progress === 100) say('Все мысли на месте');
-  else if (frame.progress >= 94 && readyAt === null) say('Ещё немного, журнал загружается…');
+  else if (frame.progress >= 94 && readyAt === null) say('Ещё немного, GigaTeams загружается…');
   else if (frame.progress >= 66) say('Запоминаем главное');
   else if (frame.progress >= 30) say('Собираем мысли');
   else say('Подключаем участников');

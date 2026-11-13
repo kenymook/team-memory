@@ -158,3 +158,6 @@
 @media (prefers-reduced-motion: reduce) {
   .service-loader *, .service-loader { animation: none !important; transition: opacity 100ms ease !important; }
 }
+
+.loader-ear,.loader-head-shape { fill: var(--intro-skin-live, var(--intro-skin)); }
+.loader-blush { fill: #d95360; opacity: var(--loader-blush, 0); pointer-events: none; }
