@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description" content="Журнал встреч, решений и действий команды дизайн-системы. Интерактивный прототип на SEDA UI." />
+  <title>Журнал решений · SEDA UI</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23161e2e'/%3E%3Cpath d='M9 9h14M9 16h9M9 23h14' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <script>
+    (() => {
+      let theme;
+      try { theme = localStorage.getItem('decision-journal-theme'); } catch {}
+      if (theme !== 'light' && theme !== 'dark') {
+        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+      document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0a0a0b' : '#ffffff';
+    })();
+  </script>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body><div id="root"></div><script type="module" src="/app.js"></script></body>
+</html>
