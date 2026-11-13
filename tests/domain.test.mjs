@@ -102,3 +102,37 @@ test('empty datasets return a stable empty context', () => {
   assert.deepEqual(getContextActions({}), []);
   assert.ok(getStats({}).every((stat) => stat.meetingCount === 0 && stat.openActions === 0 && !stat.attention));
 });
+
+test('scenario catalogs isolate analytics and action context from the original demo', () => {
+  const data = {
+    catalog: { components: ['Переводы', 'История операций'] },
+    meetings: [{ id: 'bank-meeting', date: '2026-11-12', components: ['Переводы'], teams: ['Мобильный банк'], platforms: ['iOS'] }],
+    topics: [{ id: 'bank-topic', components: ['Переводы'], teams: ['Мобильный банк'], platforms: ['iOS'], meetingIds: ['bank-meeting'], type: 'problem', confirmed: true, status: 'open' }],
+    decisions: [],
+    actions: [{ id: 'bank-action', topicId: 'bank-topic', components: ['Переводы'], teams: ['Мобильный банк'], platforms: ['iOS'], jiraState: 'not_checked' }],
+    jiraIssues: [],
+  };
+  assert.deepEqual(getStats(data).map((stat) => stat.component), ['Переводы', 'История операций']);
+  assert.equal(onlyStat(data, { component: 'Переводы' }).problemCount, 1);
+  assert.deepEqual(actionIds(data, { component: 'Переводы' }), ['bank-action']);
+  assert.deepEqual(getStats(data, { component: 'TextField' }), []);
+  assert.deepEqual(actionIds(data, { component: 'TextField' }), []);
+  assert.deepEqual(getStats({ ...data, catalog: { components: [] } }), []);
+  const cloned = cloneSeed(data);
+  cloned.catalog.components.push('Новый раздел');
+  cloned.meetings[0].title = 'Локальная правка';
+  assert.equal(data.catalog.components.length, 2);
+  assert.equal(data.meetings[0].title, undefined);
+});
+
+test('issue enrichment uses only the selected scenario even when demo issue keys overlap', () => {
+  const basis = { jiraIssues: [{ key: 'DEMO-101', description: 'Описание банковского сценария', acceptance: ['Банковский критерий'] }] };
+  const saved = { jiraIssues: [{ key: 'DEMO-101' }, { key: 'DEMO-102' }] };
+  const enriched = enrichDemoIssueDetails(saved, basis);
+  assert.equal(enriched.jiraIssues[0].description, 'Описание банковского сценария');
+  assert.deepEqual(enriched.jiraIssues[0].acceptance, ['Банковский критерий']);
+  assert.deepEqual(enriched.jiraIssues[1], { key: 'DEMO-102' });
+  enriched.jiraIssues[0].acceptance.push('Локальная правка');
+  assert.deepEqual(basis.jiraIssues[0].acceptance, ['Банковский критерий']);
+  assert.deepEqual(saved.jiraIssues[0], { key: 'DEMO-101' });
+});

@@ -155,14 +155,14 @@ export const seed = {
   ],
 };
 
-export function cloneSeed() {
-  return JSON.parse(JSON.stringify(seed));
+export function cloneSeed(basis = seed) {
+  return JSON.parse(JSON.stringify(basis));
 }
 
 /** Add newly supplied demo metadata without replacing saved edits or links. */
-export function enrichDemoIssueDetails(data) {
+export function enrichDemoIssueDetails(data, basis = seed) {
   if (!Array.isArray(data?.jiraIssues)) return data;
-  const details = new Map(seed.jiraIssues.map((issue) => [issue.key, issue]));
+  const details = new Map((basis?.jiraIssues || []).map((issue) => [issue.key, issue]));
   return {
     ...data,
     jiraIssues: data.jiraIssues.map((issue) => {
@@ -171,7 +171,7 @@ export function enrichDemoIssueDetails(data) {
       return {
         ...issue,
         description: issue.description ?? known.description,
-        acceptance: issue.acceptance ?? [...known.acceptance],
+        acceptance: issue.acceptance ?? (known.acceptance ? [...known.acceptance] : undefined),
       };
     }),
   };
@@ -228,7 +228,10 @@ function getContext(data, filters = {}) {
   const actionMatchesPlatform = (action) => includesPlatform({
     platforms: action.platforms ?? decisionById.get(action.decisionId)?.platforms ?? topicById.get(action.topicId)?.platforms ?? [],
   });
-  const visibleComponents = selectedComponent === 'all' ? components : components.filter((component) => component === selectedComponent);
+  // Each scenario owns its catalog. An explicit empty catalog is valid, and
+  // must not silently reveal design-system components from the original demo.
+  const catalog = Array.isArray(data?.catalog?.components) ? data.catalog.components : components;
+  const visibleComponents = selectedComponent === 'all' ? catalog : catalog.filter((component) => component === selectedComponent);
   const componentContexts = visibleComponents.map((component) => {
     const componentTopics = sourceTopics.filter((topic) => (topic.components || []).includes(component));
     const meetingIds = new Set(visibleMeetings.filter((meeting) => {
