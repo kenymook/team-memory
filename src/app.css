@@ -204,12 +204,6 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .ui-field__control svg, .ui-button svg, .ui-icon-button svg { width: 16px; height: 16px; }
 .ui-field__input::placeholder { color: var(--text-tertiary); opacity: 1; }
 .filter-context-note { margin: -4px 0 18px; color: var(--text-tertiary); font-size: 12px; line-height: 19px; }
-.demo-story { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 0 24px; padding: 18px 20px; border: 1px solid var(--border-default); border-radius: var(--app-panel-radius); background: var(--surface-base); }
-.demo-story-content { min-width: 0; max-width: 720px; }
-.demo-story-kicker { color: var(--text-tertiary); font-size: 11px; line-height: 17px; }
-.demo-story h2 { margin: 4px 0 6px; font-size: 16px; line-height: 23px; font-weight: 600; letter-spacing: -.2px; }
-.demo-story p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 19px; }
-.demo-story > .ui-button { flex-shrink: 0; }
 .meeting-participants { margin-top: 24px; }
 .participant-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; padding: 0; margin: 16px 0 0; list-style: none; }
 .participant-list li { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -217,7 +211,6 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .participant-list strong, .participant-list li > div > span { display: block; }
 .participant-list strong { font-size: 12px; line-height: 18px; font-weight: 500; }
 .participant-list li > div > span { margin-top: 1px; color: var(--text-tertiary); font-size: 11px; line-height: 16px; }
-.how-story { margin-top: 22px; }
 .filter-chips { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: -3px 0 16px; }
 .filter-chips:empty { display: none; }
 .tabbar { display: flex; align-items: center; gap: 22px; min-width: 0; margin: 0 0 20px; border-bottom: 1px solid var(--border-default); overflow-x: auto; scrollbar-width: thin; }
@@ -474,9 +467,6 @@ svg { flex-shrink: 0; vertical-align: middle; }
   .compact-metrics .metric-value { font-size: 24px; line-height: 30px; }
   .compact-metrics .metric-label { font-size: 12px; line-height: 18px; }
   .toolbar { gap: 8px; }
-  .demo-story { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px; margin-bottom: 21px; }
-  .demo-story h2 { font-size: 15px; line-height: 22px; }
-  .demo-story > .ui-button { width: 100%; }
   .search-field { flex-basis: 100%; min-width: 0; max-width: none; }
   .filter-field { flex: 1 1 135px; min-width: 0; }
   .tabbar { gap: 18px; margin-bottom: 16px; }
