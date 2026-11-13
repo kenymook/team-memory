@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { CalendarDays, Check, CheckCheck, ChevronRight, ChevronLeft, CircleHelp, Clock3, FileText, Filter, GitBranch, Inbox, Layers3, ListChecks, Menu, MessageSquareText, MoreHorizontal, Plus, Search, Settings2, ShieldCheck, Sparkles, Tag as TagIcon, TrendingUp, TriangleAlert, Upload, X, Link2, ArrowUpRight, RotateCcw, CheckCircle2, CircleDot, Blocks, Plug, BookOpen, LayoutGrid, ArrowRight, Sun, Moon } from "lucide-react";
 import { Button, IconButton, TextField, Select, Badge, Tag, Checkbox } from "../vendor/ui/src/index.ts";
 import "../vendor/ui/theme.css";
-import { cloneSeed, getStats, getContextActions, enrichDemoIssueDetails, isValidCalendarDate, matchText } from "./domain.js";
+import { cloneSeed, getStats, getContextActions, enrichDemoData, isValidCalendarDate, matchText } from "./domain.js";
 import { demoConfigs, selectDemo, demoHref } from "./scenarios.js";
 import "./app.css";
 const demo = selectDemo(location.search);
@@ -35,7 +35,7 @@ const plural = (n, forms) => forms[n % 10 === 1 && n % 100 !== 11 ? 0 : n % 10 >
 function savedData() {
   try {
     const d = JSON.parse(localStorage.getItem(STORAGE));
-    if (d?.schemaVersion === 1 && ["meetings", "topics", "decisions", "actions", "jiraIssues"].every((k) => Array.isArray(d[k]))) return enrichDemoIssueDetails({ ...d, catalog: demo.catalog }, seed);
+    if (d?.schemaVersion === 1 && ["meetings", "topics", "decisions", "actions", "jiraIssues"].every((k) => Array.isArray(d[k]))) return enrichDemoData({ ...d, catalog: demo.catalog }, seed);
   } catch {
   }
   return { ...cloneSeed(seed), catalog: demo.catalog, schemaVersion: 1 };
@@ -67,10 +67,11 @@ function focusableElements(el) {
   return [...el.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]')]
     .filter(e => e.offsetParent !== null && !e.closest('[inert]'));
 }
-function restoreFocus(preferred) {
+function restoreFocus(preferred, alternatives = []) {
   requestAnimationFrame(() => {
-    if (preferred?.isConnected && preferred.offsetParent !== null && !preferred.closest('[inert]')) {
-      preferred.focus({ preventScroll: true });
+    const target = [preferred, ...alternatives].find(el => el?.isConnected && el.offsetParent !== null && !el.closest('[inert]'));
+    if (target) {
+      target.focus({ preventScroll: true });
       return;
     }
     const panel = [...document.querySelectorAll('[role="dialog"]')].find(el => !el.closest('[inert]'));
@@ -284,9 +285,13 @@ function App() {
   });
   const verify = (id) => {
     const previousFocus = document.activeElement;
+    const card = previousFocus?.closest('.decision-card');
+    const nextHeading = card?.nextElementSibling?.querySelector('.decision-heading');
+    const previousHeading = card?.previousElementSibling?.querySelector('.decision-heading');
+    const panel = card?.closest('[role="tabpanel"]');
     updateDecision(id, { verification: "verified", reviewedAt: (/* @__PURE__ */ new Date()).toISOString() });
     setToast("Точность записи подтверждена");
-    restoreFocus(previousFocus);
+    restoreFocus(card?.querySelector('.decision-heading') || previousFocus, [nextHeading, previousHeading, panel]);
   };
   const linkIssue = (actionId, key) => {
     const action = data.actions.find(a => a.id === actionId);
@@ -316,7 +321,28 @@ function App() {
     if (!meeting) return null;
     return <div className="source-quote"><div className="source-head"><MessageSquareText size={15} /><span>Фрагмент встречи</span><button className="text-button mono" onClick={() => openMeeting(meeting.id, "transcript", segment?.id)}>{segment?.time || "Открыть"} <ArrowUpRight size={13} /></button></div><p className="source-text">«{segment?.text || "Фрагмент не указан"}»</p><button className="text-button small" onClick={() => openMeeting(meeting.id)}>{meeting.title}</button></div>;
   };
-  const renderDecisionCard = ({ item, compact = false }) => <article key={item.id} className="decision-card"><div className="decision-card-head"><span className="mono small muted">{item.id}</span><div className="inline">{item.lifecycle === "superseded" ? <Status>Заменено</Status> : item.lifecycle === "revoked" ? <Status tone="danger">Отменено</Status> : item.verification === "pending" ? <Status tone="warning">Проверить запись</Status> : <Status tone="success">Проверено</Status>}</div></div><button className="table-link decision-heading" onClick={() => openDecision(item.id)}>{item.title}</button><p className="decision-body">{item.text}</p><div className="decision-meta"><Tags values={item.components} /><span className="small muted">{item.platforms.join(" · ")} · {dateLabel(item.createdAt)}</span></div>{!compact && <><div className="reason-box"><span className="small muted">Почему</span><p>{item.reason || "Причина не зафиксирована на встрече."}</p></div><div className="decision-actions"><button className="text-button" onClick={() => openMeeting(item.source.meetingId, "transcript", item.source.segmentId)}><MessageSquareText size={15} /> Открыть источник</button>{item.verification === "pending" && <Button variant="secondary" iconLeft={<Check size={16} />} onClick={() => verify(item.id)}>Запись верна</Button>}</div></>}</article>;
+  const renderDecisionCard = ({ item }) => <article key={item.id} className="decision-card" data-decision-id={item.id}>
+    <div className="decision-card-head">
+      <span className="mono small muted">{item.id}</span>
+      {item.verification === "pending" && <Status tone="warning">Проверить запись</Status>}
+      {item.lifecycle === "superseded" && <Status>Заменено</Status>}
+      {item.lifecycle === "revoked" && <Status tone="danger">Отменено</Status>}
+    </div>
+    <button className="table-link decision-heading" onClick={() => openDecision(item.id)}>{item.title}</button>
+    <p className="decision-body">{item.text}</p>
+    <p className="decision-reason"><span>Почему:</span> {item.reason || "Причина не зафиксирована на встрече."}</p>
+    <div className="decision-card-footer">
+      <div className="decision-meta">
+        <Tags values={item.components}/>
+        <span className="decision-platforms">{item.platforms.join(" · ")}</span>
+        <time dateTime={item.createdAt}>{dateLabel(item.createdAt)}</time>
+      </div>
+      <div className="decision-card-controls">
+        <Button variant="ghost" iconLeft={<MessageSquareText size={16}/>} onClick={() => openMeeting(item.source.meetingId, "transcript", item.source.segmentId)}>Открыть источник</Button>
+        {item.verification === "pending" && <Button variant="secondary" iconLeft={<Check size={16}/>} onClick={() => verify(item.id)}>Запись верна</Button>}
+      </div>
+    </div>
+  </article>;
   function Toolbar({ analytics = false }) {
     const hasFilters = Object.values(filters).some(v => v !== 'all');
     const topicContext = analytics || page === 'review' && reviewTab === 'actions';

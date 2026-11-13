@@ -5,11 +5,25 @@ export const components = ['TextField', 'Select', 'Button', 'Modal', 'Table', 'T
 export const teams = ['Команда ДС', 'Личный кабинет', 'Платежи', 'Каталог', 'Поддержка'];
 export const platforms = ['Web', 'Android', 'iOS'];
 
+// Roles and people belong to the fictional design-system demo only.
+const designParticipants = {
+  design: { name: 'Алина Миронова', role: 'Дизайнер ДС' },
+  web: { name: 'Павел Громов', role: 'Разработчик ДС · Web' },
+  android: { name: 'Максим Лавров', role: 'Разработчик ДС · Android' },
+  ios: { name: 'Кирилл Власов', role: 'Разработчик ДС · iOS' },
+  cabinet: { name: 'Ольга Новикова', role: 'Дизайнер продукта · Личный кабинет' },
+  payments: { name: 'Михаил Беляев', role: 'Дизайнер продукта · Платежи' },
+  catalog: { name: 'Дарья Сафонова', role: 'Дизайнер продукта · Каталог' },
+  support: { name: 'Никита Сергеев', role: 'Специалист поддержки' },
+};
+const meetingParticipants = (...keys) => keys.map(key => ({ ...designParticipants[key] }));
+
 export const seed = {
   meetings: [
     {
       id: 'm1', title: 'TextField: ошибка во время ввода с маской', date: '2026-10-23', duration: 28,
       kind: 'review', components: ['TextField'], teams: ['Личный кабинет'], platforms: ['Web'],
+      participants: meetingParticipants('cabinet', 'web', 'design'),
       summary: 'В демонстрационном сценарии маска и валидация одновременно меняют значение поля. Команда договорилась сначала проверять значение после потери фокуса. Позднее это решение было заменено.',
       highlights: ['Зафиксировано первое проявление проблемы.', 'Исходное решение сохранено в истории и больше не действует.'],
       processing: 'ready', topicIds: ['t1'],
@@ -22,8 +36,9 @@ export const seed = {
     {
       id: 'm2', title: 'Select: фокус при обновлении вариантов', date: '2026-10-29', duration: 35,
       kind: 'review', components: ['Select'], teams: ['Каталог'], platforms: ['Web'],
-      summary: 'После обновления результатов поиска фокус пропадает из Select. Зафиксирована проблема и необходимость исправления. В демонстрационной Jira найдены две похожие задачи, связь пока не подтверждена.',
-      highlights: ['Проблема подтверждена в сценарии поиска.', 'Два кандидата Jira требуют проверки человеком.'],
+      participants: meetingParticipants('catalog', 'web', 'design'),
+      summary: 'После обновления результатов поиска фокус пропадает из Select. Зафиксировали проблему и согласовали сохранение фокуса при обновлении списка. Похожие задачи договорились сравнить по описанию и критериям, чтобы избежать дубликата.',
+      highlights: ['Проблема подтверждена в сценарии поиска.', 'Согласовали сравнение похожих задач по содержанию.'],
       processing: 'ready', topicIds: ['t2'],
       transcript: [
         { id: 'm2-s1', time: '04:15', speaker: 'Дизайнер продукта', text: 'Список вариантов обновляется после запроса. В этот момент фокус покидает поле поиска, и следующий символ уже не вводится.' },
@@ -34,8 +49,9 @@ export const seed = {
     {
       id: 'm3', title: 'Button: состояние загрузки без скачка ширины', date: '2026-11-03', duration: 24,
       kind: 'development', components: ['Button'], teams: ['Каталог'], platforms: ['Web', 'Android', 'iOS'],
-      summary: 'Рассмотрен запрос на состояние загрузки Button с сохранением размеров. Решение принято; требуется подготовить задачу. В доступном демонстрационном проекте совпадений не найдено.',
-      highlights: ['Запрос изменения отделён от подтверждённых проблем.', 'Подготовлены описание и критерии будущей задачи.'],
+      participants: meetingParticipants('catalog', 'design', 'web', 'android', 'ios'),
+      summary: 'Рассмотрели запрос на состояние загрузки Button с сохранением размеров. Согласовали сохранение ширины и проверку поведения на Web, Android и iOS.',
+      highlights: ['Запрос изменения отделён от подтверждённых проблем.', 'Договорились проверить размеры с разными текстами на трёх платформах.'],
       processing: 'ready', topicIds: ['t3'],
       transcript: [
         { id: 'm3-s1', time: '02:50', speaker: 'Дизайнер продукта', text: 'Нужно показывать загрузку в кнопке и сохранять место в группе действий. Это запрос на развитие компонента, а не сообщение о текущем дефекте.' },
@@ -46,8 +62,9 @@ export const seed = {
     {
       id: 'm4', title: 'TextField: повторная проверка и пересмотр решения', date: '2026-11-05', duration: 42,
       kind: 'review', components: ['TextField'], teams: ['Личный кабинет', 'Платежи'], platforms: ['Web'],
+      participants: meetingParticipants('cabinet', 'payments', 'web', 'design'),
       summary: 'Вторая команда подтвердила тот же конфликт маски и валидации. Проверка только после потери фокуса не покрывает управляемые формы. Принято новое решение: разделить форматирование и события валидации.',
-      highlights: ['Одна проблема затронула две команды.', 'Новое решение заменяет DEC-001.', 'Работа связана с демонстрационной задачей DEMO-101.'],
+      highlights: ['Одна проблема затронула две команды.', 'Новое решение заменяет DEC-001.', 'На встрече согласовали привязку реализации к демонстрационной задаче DEMO-101.'],
       processing: 'ready', topicIds: ['t1'],
       transcript: [
         { id: 'm4-s1', time: '05:00', speaker: 'Дизайнер продукта', text: 'У второй команды обнаружился тот же конфликт. Проверки только при потере фокуса недостаточно: форма может запускать проверку самостоятельно.' },
@@ -59,7 +76,8 @@ export const seed = {
     {
       id: 'm5', title: 'Table: контракт закрепления колонок', date: '2026-11-06', duration: 31,
       kind: 'development', components: ['Table'], teams: ['Команда ДС'], platforms: ['Web'],
-      summary: 'Внутреннее развитие Table: согласован проверочный пример закреплённых колонок. Необходимо оформить исследовательскую задачу. Поиск в Jira для этого действия ещё не выполнялся.',
+      participants: meetingParticipants('design', 'web'),
+      summary: 'Внутреннее развитие Table: согласовали проверочный пример закреплённых колонок. Договорились подготовить пример с горизонтальной прокруткой и список ограничений перед расширением API.',
       highlights: ['Внутреннее развитие не учитывается как проблема потребителя.', 'Сначала проверяем контракт на одном примере.'],
       processing: 'review', topicIds: ['t4'],
       transcript: [
@@ -71,8 +89,9 @@ export const seed = {
     {
       id: 'm6', title: 'Select: повтор проблемы и состояния загрузки', date: '2026-11-09', duration: 29,
       kind: 'review', components: ['Select'], teams: ['Личный кабинет', 'Каталог'], platforms: ['Web'],
-      summary: 'Вторая команда подтвердила потерю фокуса Select. Обсудили разделение загрузки и пустого результата. Извлечённое решение по этим состояниям ожидает проверки.',
-      highlights: ['Повторное обсуждение связано с существующей проблемой.', 'Предложенная запись решения ещё не проверена.'],
+      participants: meetingParticipants('cabinet', 'catalog', 'design', 'web'),
+      summary: 'Вторая команда подтвердила потерю фокуса Select. Согласовали отдельное представление загрузки списка и пустого результата, чтобы различать ожидание ответа и завершённый поиск.',
+      highlights: ['Повторное обсуждение связано с существующей проблемой.', 'Согласовали раздельные состояния загрузки и пустого результата.'],
       processing: 'review', topicIds: ['t2'],
       transcript: [
         { id: 'm6-s1', time: '04:30', speaker: 'Дизайнер продукта', text: 'Мы воспроизвели ту же потерю фокуса. Это существующая проблема Select, отдельное обращение не должно становиться второй проблемой в статистике.' },
@@ -83,8 +102,9 @@ export const seed = {
     {
       id: 'm7', title: 'Modal и Tooltip: прокрутка и консультация по API', date: '2026-11-10', duration: 38,
       kind: 'consultation', components: ['Modal', 'Tooltip'], teams: ['Платежи', 'Поддержка'], platforms: ['Web'],
+      participants: meetingParticipants('payments', 'support', 'web', 'design'),
       summary: 'Зафиксирована проблема восстановления прокрутки при вложенных Modal. Отдельно разобран вопрос по API Tooltip: изменений не требуется. Эти темы связаны с разными командами и учитываются отдельно.',
-      highlights: ['Проблема Modal относится к команде «Платежи».', 'Tooltip — консультация для команды «Поддержка», новая задача не нужна.', 'Проверить Jira по Modal пока не удалось.'],
+      highlights: ['Проблема Modal относится к команде «Платежи».', 'По Tooltip на встрече согласовали сохранить API без новой задачи.', 'Во время встречи проверка Jira по Modal была недоступна.'],
       processing: 'ready', topicIds: ['t5', 't6'],
       transcript: [
         { id: 'm7-s1', time: '05:40', speaker: 'Дизайнер продукта', text: 'После закрытия вложенного окна прокрутка основной страницы остаётся заблокированной. Это воспроизводится в сценарии команды платежей.' },
@@ -97,8 +117,9 @@ export const seed = {
     {
       id: 'm8', title: 'TextField и Button: уточнение границ изменений', date: '2026-11-12', duration: 26,
       kind: 'review', components: ['TextField', 'Button'], teams: ['Личный кабинет', 'Платежи', 'Каталог'], platforms: ['Web', 'Android', 'iOS'],
-      summary: 'Уточнили область исправления TextField и независимость loading от disabled у Button. Две записи решений ожидают проверки. Повторное обсуждение TextField связано с прежней проблемой и задачей.',
-      highlights: ['Исправление TextField ограничено Web.', 'Loading не меняет существующий контракт disabled.', 'Две новые записи нужно сверить с источником.'],
+      participants: meetingParticipants('cabinet', 'payments', 'catalog', 'design', 'web', 'android', 'ios'),
+      summary: 'Уточнили область исправления TextField и независимость loading от disabled у Button. Повторное обсуждение TextField продолжило прежнюю тему; новых проблем по нему не выделяли.',
+      highlights: ['Исправление TextField ограничено Web.', 'Loading не меняет существующий контракт disabled.', 'Зафиксированы границы платформ и независимость состояний.'],
       processing: 'review', topicIds: ['t1', 't3'],
       transcript: [
         { id: 'm8-s1', time: '04:20', speaker: 'Разработчик ДС', text: 'Исправление маски остаётся в работе в DEMO-101. Сегодня обсуждаем ту же проблему, новую задачу и новую проблему не создаём.' },
@@ -122,11 +143,11 @@ export const seed = {
     { id: 'DEC-003', title: 'Сохранять ширину Button в состоянии загрузки', text: 'Добавить состояние loading с сохранением ширины кнопки при замене её содержимого индикатором.', reason: 'Соседние действия не должны смещаться при переходе кнопки в загрузку.', scope: 'Button на Web, Android и iOS; запрос на развитие компонента.', components: ['Button'], teams: ['Каталог'], platforms: ['Web', 'Android', 'iOS'], topicId: 't3', source: { meetingId: 'm3', segmentId: 'm3-s2' }, verification: 'verified', lifecycle: 'active', supersedes: null, createdAt: '2026-11-03', actionIds: ['ACT-003'] },
     { id: 'DEC-004', title: 'Разделить маску и события валидации TextField', text: 'Разделить форматирование маски и пользовательскую валидацию. Предоставить независимые события изменения значения и потери фокуса; правила проверки определяет продукт.', reason: 'Фиксированная проверка только после потери фокуса ограничивает управляемые формы и не покрывает сценарии двух команд.', scope: 'Web-поле с маской; заменяет DEC-001. Контракт остальных платформ не меняется.', components: ['TextField'], teams: ['Личный кабинет', 'Платежи'], platforms: ['Web'], topicId: 't1', source: { meetingId: 'm4', segmentId: 'm4-s3' }, verification: 'verified', lifecycle: 'active', supersedes: 'DEC-001', createdAt: '2026-11-05', actionIds: ['ACT-001'] },
     { id: 'DEC-005', title: 'Проверить закрепление колонок Table на примере', text: 'Подготовить один проверочный пример с закреплёнными первой и последней колонками и горизонтальной прокруткой.', reason: 'Выявить ограничения до расширения публичного API Table.', scope: 'Внутреннее развитие Table, Web; это не подтверждённая проблема продуктовой команды.', components: ['Table'], teams: ['Команда ДС'], platforms: ['Web'], topicId: 't4', source: { meetingId: 'm5', segmentId: 'm5-s2' }, verification: 'verified', lifecycle: 'active', supersedes: null, createdAt: '2026-11-06', actionIds: ['ACT-004'] },
-    { id: 'DEC-006', title: 'Различать загрузку и пустой результат Select', text: 'Представлять загрузку вариантов и отсутствие результатов как два отдельных состояния Select.', reason: 'Одинаковое пустое место не объясняет, завершился ли поиск.', scope: 'Select с асинхронным поиском, Web. Извлечение решения ещё не проверено.', components: ['Select'], teams: ['Каталог', 'Личный кабинет'], platforms: ['Web'], topicId: 't2', source: { meetingId: 'm6', segmentId: 'm6-s2' }, verification: 'pending', lifecycle: 'active', supersedes: null, createdAt: '2026-11-09', actionIds: [] },
+    { id: 'DEC-006', title: 'Различать загрузку и пустой результат Select', text: 'Представлять загрузку вариантов и отсутствие результатов как два отдельных состояния Select.', reason: 'Одинаковое пустое место не объясняет, завершился ли поиск.', scope: 'Select с асинхронным поиском, Web.', components: ['Select'], teams: ['Каталог', 'Личный кабинет'], platforms: ['Web'], topicId: 't2', source: { meetingId: 'm6', segmentId: 'm6-s2' }, verification: 'pending', lifecycle: 'active', supersedes: null, createdAt: '2026-11-09', actionIds: [] },
     { id: 'DEC-007', title: 'Восстанавливать прокрутку после последнего Modal', text: 'Учитывать все открытые Modal и снимать блокировку прокрутки после закрытия последнего окна.', reason: 'Вложенные окна нарушают восстановление прокрутки основной страницы.', scope: 'Вложенные Modal на Web в подтверждённом сценарии команды «Платежи».', components: ['Modal'], teams: ['Платежи'], platforms: ['Web'], topicId: 't5', source: { meetingId: 'm7', segmentId: 'm7-s2' }, verification: 'verified', lifecycle: 'active', supersedes: null, createdAt: '2026-11-10', actionIds: ['ACT-005'] },
     { id: 'DEC-008', title: 'Сохранить существующий API Tooltip', text: 'Использовать существующий API позиционирования Tooltip; изменение компонента и новая задача не требуются.', reason: null, scope: 'Консультационный сценарий команды «Поддержка», Web. Причина выбора отдельно не зафиксирована.', components: ['Tooltip'], teams: ['Поддержка'], platforms: ['Web'], topicId: 't6', source: { meetingId: 'm7', segmentId: 'm7-s4' }, verification: 'verified', lifecycle: 'active', supersedes: null, createdAt: '2026-11-10', actionIds: ['ACT-006'] },
     { id: 'DEC-009', title: 'Ограничить исправление TextField платформой Web', text: 'В рамках текущего исправления маски не менять поведение Android и iOS.', reason: 'Подтверждённый сценарий относится к Web; изменение остальных платформ требует отдельного основания.', scope: 'Граница исправления DEC-004. Это не изменение контрактов Android и iOS.', components: ['TextField'], teams: ['Личный кабинет', 'Платежи'], platforms: ['Web', 'Android', 'iOS'], topicId: 't1', source: { meetingId: 'm8', segmentId: 'm8-s2' }, verification: 'pending', lifecycle: 'active', supersedes: null, createdAt: '2026-11-12', actionIds: [] },
-    { id: 'DEC-010', title: 'Сохранить независимость loading и disabled у Button', text: 'Добавить loading отдельно от существующего API disabled, сохранив возможность независимо задавать эти состояния.', reason: 'Продуктам требуется независимо управлять загрузкой и доступностью действия.', scope: 'Уточнение запроса Button для Web, Android и iOS. Извлечение ещё не проверено.', components: ['Button'], teams: ['Каталог'], platforms: ['Web', 'Android', 'iOS'], topicId: 't3', source: { meetingId: 'm8', segmentId: 'm8-s3' }, verification: 'pending', lifecycle: 'active', supersedes: null, createdAt: '2026-11-12', actionIds: [] },
+    { id: 'DEC-010', title: 'Сохранить независимость loading и disabled у Button', text: 'Добавить loading отдельно от существующего API disabled, сохранив возможность независимо задавать эти состояния.', reason: 'Продуктам требуется независимо управлять загрузкой и доступностью действия.', scope: 'Уточнение запроса Button для Web, Android и iOS.', components: ['Button'], teams: ['Каталог'], platforms: ['Web', 'Android', 'iOS'], topicId: 't3', source: { meetingId: 'm8', segmentId: 'm8-s3' }, verification: 'pending', lifecycle: 'active', supersedes: null, createdAt: '2026-11-12', actionIds: [] },
   ],
   actions: [
     { id: 'ACT-001', platforms: ['Web'], title: 'Разделить обработку маски и валидации TextField', description: 'Исправить конфликт форматирования маски и пользовательской проверки; реализовать независимые события изменения и потери фокуса.', acceptance: ['Проверка значения не меняет порядок форматирования маски.', 'Продукт может независимо обработать изменение и потерю фокуса.', 'Проверочные сценарии обеих команд проходят на Web.'], topicId: 't1', decisionId: 'DEC-004', source: { meetingId: 'm4', segmentId: 'm4-s4' }, components: ['TextField'], teams: ['Личный кабинет', 'Платежи'], jiraState: 'linked', issueKey: 'DEMO-101', candidateKeys: [], project: 'DS', assignee: 'Разработчик ДС', lastChecked: '2026-11-12T09:30:00Z', reason: 'Связь подтверждена в демонстрационном сценарии. DEMO-101 — вымышленная задача.' },
@@ -175,6 +196,101 @@ export function enrichDemoIssueDetails(data, basis = seed) {
       };
     }),
   };
+}
+
+// Exact previous demo copy: migrate these values, never arbitrary user text.
+const previousDesignCopy = {
+  "meetings": {
+    "m2": {
+      "summary": "После обновления результатов поиска фокус пропадает из Select. Зафиксирована проблема и необходимость исправления. В демонстрационной Jira найдены две похожие задачи, связь пока не подтверждена.",
+      "highlights": [
+        "Проблема подтверждена в сценарии поиска.",
+        "Два кандидата Jira требуют проверки человеком."
+      ]
+    },
+    "m3": {
+      "summary": "Рассмотрен запрос на состояние загрузки Button с сохранением размеров. Решение принято; требуется подготовить задачу. В доступном демонстрационном проекте совпадений не найдено.",
+      "highlights": [
+        "Запрос изменения отделён от подтверждённых проблем.",
+        "Подготовлены описание и критерии будущей задачи."
+      ]
+    },
+    "m4": {
+      "highlights": [
+        "Одна проблема затронула две команды.",
+        "Новое решение заменяет DEC-001.",
+        "Работа связана с демонстрационной задачей DEMO-101."
+      ]
+    },
+    "m5": {
+      "summary": "Внутреннее развитие Table: согласован проверочный пример закреплённых колонок. Необходимо оформить исследовательскую задачу. Поиск в Jira для этого действия ещё не выполнялся."
+    },
+    "m6": {
+      "summary": "Вторая команда подтвердила потерю фокуса Select. Обсудили разделение загрузки и пустого результата. Извлечённое решение по этим состояниям ожидает проверки.",
+      "highlights": [
+        "Повторное обсуждение связано с существующей проблемой.",
+        "Предложенная запись решения ещё не проверена."
+      ]
+    },
+    "m7": {
+      "highlights": [
+        "Проблема Modal относится к команде «Платежи».",
+        "Tooltip — консультация для команды «Поддержка», новая задача не нужна.",
+        "Проверить Jira по Modal пока не удалось."
+      ]
+    },
+    "m8": {
+      "summary": "Уточнили область исправления TextField и независимость loading от disabled у Button. Две записи решений ожидают проверки. Повторное обсуждение TextField связано с прежней проблемой и задачей.",
+      "highlights": [
+        "Исправление TextField ограничено Web.",
+        "Loading не меняет существующий контракт disabled.",
+        "Две новые записи нужно сверить с источником."
+      ]
+    }
+  },
+  "decisions": {
+    "DEC-006": {
+      "scope": "Select с асинхронным поиском, Web. Извлечение решения ещё не проверено."
+    },
+    "DEC-010": {
+      "scope": "Уточнение запроса Button для Web, Android и iOS. Извлечение ещё не проверено."
+    }
+  }
+};
+
+/** Add selected-scenario metadata and correct unchanged legacy demo copy. */
+export function enrichDemoData(data, basis = seed) {
+  let enriched = enrichDemoIssueDetails(data, basis);
+  if (!enriched || typeof enriched !== 'object') return enriched;
+  for (const collection of ['meetings', 'decisions']) {
+    if (!Array.isArray(enriched[collection])) continue;
+    const knownById = new Map((basis?.[collection] || []).map(item => [item.id, item]));
+    const designById = new Map(seed[collection].map(item => [item.id, item]));
+    enriched = {
+      ...enriched,
+      [collection]: enriched[collection].map(item => {
+        const known = knownById.get(item.id);
+        if (!known) return item;
+        let next = item;
+        if (collection === 'meetings' && item.participants === undefined && Array.isArray(known.participants)) {
+          next = { ...next, participants: known.participants.map(person => ({ ...person })) };
+        }
+        // The selected scenario must carry the same design-system record.
+        // Bank records and custom/imported records do not match this boundary.
+        const previous = previousDesignCopy[collection][item.id];
+        const original = designById.get(item.id);
+        if (previous && original && known.title === original.title) {
+          for (const [field, value] of Object.entries(previous)) {
+            if (JSON.stringify(item[field]) === JSON.stringify(value)) {
+              next = { ...next, [field]: Array.isArray(known[field]) ? [...known[field]] : known[field] };
+            }
+          }
+        }
+        return next;
+      }),
+    };
+  }
+  return enriched;
 }
 
 /** Date.parse alone normalizes impossible dates such as 2026-02-31. */
