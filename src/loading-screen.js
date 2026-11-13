@@ -129,7 +129,7 @@ function draw(now) {
     progressBar?.setAttribute('aria-valuenow', String(frame.progress));
     const scale = mode === 'full' ? 1 + 0.6 * frame.progress / 100 : 1;
     head.setAttribute('transform', `translate(300 290) scale(${scale}) translate(-300 -290)`);
-    progressText.setAttribute('y', String(290 - 76 * scale));
+    progressText.setAttribute('y', String(290 - 63 * scale));
   }
   const voices = speakingParticipants(frame.progress, elapsed, skipped ? 'quick' : mode);
   participants.forEach(participant => {

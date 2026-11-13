@@ -1,7 +1,7 @@
 // Presentation timing is independent of network transfer. Completion is gated by
 // the app's committed first render, its module and its stylesheet being ready.
 export const LOADING_TIMING = Object.freeze({
-  gather: 3300,
+  gather: 8410,
   hold: 150,
   burst: 480,
   title: 700,

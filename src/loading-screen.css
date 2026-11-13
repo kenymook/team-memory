@@ -64,7 +64,7 @@
 .loader-eye { stroke-width: 4.6; }
 .loader-cheek { stroke: #c69c87; stroke-width: 3.2; opacity: .5; }
 .loader-nose { stroke-width: 2.1; opacity: .5; }
-.loader-percent { fill: #2c3531; font-size: 31px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -1.7px; text-anchor: middle; dominant-baseline: middle; }
+.loader-percent { fill: #2c3531; font-size: 28px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -1.4px; text-anchor: middle; dominant-baseline: middle; }
 .loader-participant { opacity: 0; transform: scale(.55) rotate(var(--tilt)); transition: opacity 200ms ease, transform 430ms cubic-bezier(.2,.9,.2,1.2); }
 .loader-participant[data-visible="true"] { opacity: 1; transform: scale(1) rotate(0deg); }
 .loader-participant--blue { --voice-color: var(--intro-blue); }

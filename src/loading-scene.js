@@ -61,7 +61,7 @@ export default `
                 <path class="loader-cheek" d="M251 276h9M340 276h9" />
               </g>
             </g>
-            <text data-loader-progress class="loader-percent" x="300" y="214">0%</text>
+            <text data-loader-progress class="loader-percent" x="300" y="227">0%</text>
           </g>
           <g class="loader-burst" transform="translate(300 216)">
             <circle class="loader-burst-ring" r="43" />

@@ -13,15 +13,16 @@ test('the intro cannot reach 100% or reveal an unready application', () => {
   }
 });
 
-test('a quick app still completes the first-view story in order', () => {
+test('a quick app completes the first-view story in exactly ten seconds', () => {
   const at = elapsed => loadingFrame({ elapsed, readyAt: 200 });
   assert.equal(at(0).progress, 0);
-  assert.equal(at(3299).stage, 'loading');
-  assert.equal(at(3300).progress, 100);
-  assert.equal(at(3450).stage, 'burst');
-  assert.equal(at(3930).stage, 'title');
-  assert.equal(at(4630).stage, 'exiting');
-  assert.equal(at(4890).done, true);
+  assert.equal(at(8409).stage, 'loading');
+  assert.equal(at(8410).progress, 100);
+  assert.equal(at(8560).stage, 'burst');
+  assert.equal(at(9040).stage, 'title');
+  assert.equal(at(9740).stage, 'exiting');
+  assert.equal(at(9999).done, false);
+  assert.equal(at(10000).done, true);
 });
 
 test('late readiness starts the finale only after app, module and CSS are ready', () => {
