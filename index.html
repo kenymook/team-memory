@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-service-loading>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -19,7 +19,22 @@
       document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#0a0a0b' : '#ffffff';
     })();
   </script>
-  <link rel="stylesheet" href="/app.css" />
+  <style>
+    html { background: #fff; color: #18191b; }
+    html[data-theme="dark"] { background: #0a0a0b; color: #fafafa; }
+    body { margin: 0; }
+    #boot-fallback { display: grid; min-height: 100dvh; place-content: center; gap: 16px; text-align: center; padding: 24px; box-sizing: border-box; font: 14px/1.5 system-ui, sans-serif; }
+    #boot-fallback button { justify-self: center; font: inherit; padding: 8px 16px; border: 1px solid currentColor; border-radius: 8px; color: inherit; background: transparent; cursor: pointer; }
+    html[data-service-loading] #root { visibility: hidden; }
+  </style>
+  <link rel="stylesheet" href="/loading.css" />
+  <link rel="preload" href="/app.css" as="style" />
+  <link rel="modulepreload" href="/app.js" />
 </head>
-<body><div id="root"></div><script type="module" src="/app.js"></script></body>
+<body>
+  <div id="boot-fallback" role="status"><span>Загружаем журнал…</span></div>
+  <div id="root" inert aria-hidden="true"></div>
+  <noscript><style>#boot-fallback { display: none; }</style><p style="padding:24px;font:16px/1.5 system-ui">Для работы журнала включите JavaScript в браузере.</p></noscript>
+  <script defer src="/loading.js" onerror="document.getElementById('boot-fallback').innerHTML='<span>Не удалось загрузить журнал.</span><button onclick=&quot;location.reload()&quot;>Повторить</button>'"></script>
+</body>
 </html>

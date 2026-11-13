@@ -176,6 +176,7 @@ function FocusPanel({ children, className, onClose, label, active = true, restor
   return <section ref={ref} role={active ? "dialog" : undefined} aria-modal={active ? true : undefined} aria-hidden={!active || undefined} inert={active ? undefined : ""} aria-label={label} tabIndex={-1} className={className}>{children}</section>;
 }
 function App() {
+  useLayoutEffect(() => { window.dispatchEvent(new Event('team-memory:ready')); }, []);
   const [data, setData] = useState(savedData);
   const [themePreference, setThemePreference] = useState(savedThemePreference);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
