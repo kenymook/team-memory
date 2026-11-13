@@ -496,7 +496,17 @@ function App() {
     </aside>
     {isMobile && mobileOpen && <button className="mobile-backdrop" aria-hidden="true" tabIndex={-1} onClick={() => setMobileOpen(false)}/>}
     <div className="workspace" aria-hidden={workspaceBlocked || undefined} inert={workspaceBlocked ? '' : undefined}>
-      <header className="topbar"><div className="topbar-context"><IconButton ref={menuTriggerRef} className="mobile-menu" variant="ghost" aria-label="Открыть меню" aria-expanded={mobileOpen} aria-controls="workspace-navigation" icon={<Menu size={19}/>} onClick={() => setMobileOpen(value => !value)}/><div className="demo-selector"><Select label="Сценарий демо" size="s" value={demo.id} options={Object.values(demoConfigs).map(item => ({value: item.id, label: item.name}))} onValueChange={id => { if (id !== demo.id) location.assign(demoHref(id, location.href)); }}/></div><div className="breadcrumbs"><ChevronRight size={13}/><strong>{labels.page[page]}</strong></div></div><div className="topbar-actions"><IconButton className="theme-toggle" variant="ghost" aria-label={themeAction} tooltip={themeAction} icon={theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>} onClick={toggleTheme}/></div></header>
+      <header className="topbar">
+        <div className="topbar-context">
+          <IconButton ref={menuTriggerRef} className="mobile-menu" variant="ghost" aria-label="Открыть меню" aria-expanded={mobileOpen} aria-controls="workspace-navigation" icon={<Menu size={19}/>} onClick={() => setMobileOpen(value => !value)}/>
+          <div className="demo-selector">
+            <span className="demo-selector-size" aria-hidden="true">{demo.name}</span>
+            <Select label="Сценарий демо" size="s" value={demo.id} options={Object.values(demoConfigs).map(item => ({value: item.id, label: item.name}))} onValueChange={id => { if (id !== demo.id) location.assign(demoHref(id, location.href)); }}/>
+          </div>
+          <div className="breadcrumbs"><span aria-hidden="true">/</span><span aria-current="page">{labels.page[page]}</span></div>
+        </div>
+        <div className="topbar-actions"><IconButton className="theme-toggle" variant="ghost" aria-label={themeAction} tooltip={themeAction} icon={theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>} onClick={toggleTheme}/></div>
+      </header>
       <main className="main-content" tabIndex={-1}>{storageError && <Notice tone="warning">Изменения доступны в текущей вкладке. Браузер не разрешил локальное сохранение.</Notice>}{page === 'meetings' ? MeetingsPage() : page === 'decisions' ? DecisionsPage() : page === 'review' ? ReviewPage() : page === 'analytics' ? AnalyticsPage() : IntegrationsPage()}</main>
     </div>
     {drawer && <div className="overlay" onMouseDown={e => {if(e.target === e.currentTarget) closeDrawer();}}>
