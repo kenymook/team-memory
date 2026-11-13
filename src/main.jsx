@@ -10,6 +10,8 @@ const demo = selectDemo(location.search);
 const { seed, catalog: { components, teams, platforms }, copy } = demo;
 const STORAGE = demo.storageKey;
 const THEME_STORAGE = "decision-journal-theme";
+const PAGE_SIZE = 12;
+const INITIAL_LIST_PAGES = { meetings: 1, decisions: 1, reviewRecords: 1, reviewActions: 1 };
 function savedThemePreference() {
   try {
     const preference = localStorage.getItem(THEME_STORAGE);
@@ -52,6 +54,23 @@ function Empty({ title = "Ничего не найдено", text = "Попро�
 function Notice({ tone = "info", children }) {
   return <div className={"notice " + tone}><span className="notice-icon">{tone === "warning" ? <TriangleAlert /> : tone === "success" ? <CheckCircle2 /> : <CircleHelp />}</span><div className="notice-text">{children}</div></div>;
 }
+function paginate(items, requestedPage) {
+  const total = items.length;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(1, requestedPage), pageCount);
+  const offset = (page - 1) * PAGE_SIZE;
+  return { items: items.slice(offset, offset + PAGE_SIZE), total, pageCount, page, start: total ? offset + 1 : 0, end: Math.min(offset + PAGE_SIZE, total) };
+}
+function ListPagination({ range, label, onChange }) {
+  return <div className="table-footer list-pagination">
+    <span role="status" aria-atomic="true">Показано {range.total ? range.start + "–" + range.end : 0} из {range.total}</span>
+    {range.pageCount > 1 && <nav className="pagination-controls" aria-label={label}>
+      <Button variant="ghost" iconLeft={<ChevronLeft size={16}/>} disabled={range.page === 1} onClick={() => onChange(range.page - 1)}>Назад</Button>
+      <span className="pagination-page">{range.page} из {range.pageCount}</span>
+      <Button variant="ghost" iconRight={<ChevronRight size={16}/>} disabled={range.page === range.pageCount} onClick={() => onChange(range.page + 1)}>Далее</Button>
+    </nav>}
+  </div>;
+}
 function Tabs({ value, onChange, items, label, className = "", panelClassName = "", children }) {
   const groupId = useId();
   return <><div className={"tabbar " + className} role="tablist" aria-label={label}>{items.map(({ id, label, count }) => <button type="button" id={`${groupId}-tab-${id}`} role="tab" aria-controls={`${groupId}-panel-${id}`} aria-selected={value === id} tabIndex={value === id ? 0 : -1} onKeyDown={(e) => {
@@ -67,16 +86,53 @@ function focusableElements(el) {
   return [...el.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]')]
     .filter(e => e.offsetParent !== null && !e.closest('[inert]'));
 }
-function restoreFocus(preferred, alternatives = []) {
+function listFocusFallback(opener) {
+  const list = opener?.closest('[data-paged-list]') || opener?.closest('[role="tabpanel"]');
+  if (!list) return () => null;
+  const listKey = list.dataset.pagedList;
+  const rowSelector = '.decision-card, .action-card, tbody tr';
+  const row = opener.closest(rowSelector);
+  const rowKey = element => element?.dataset.decisionId || element?.dataset.actionId || element?.dataset.meetingId;
+  const key = rowKey(row);
+  const index = Math.max(0, [...list.querySelectorAll(rowSelector)].indexOf(row));
+  return () => {
+    const currentList = listKey ? document.querySelector('[data-paged-list="' + listKey + '"]') : document.getElementById(list.id);
+    if (!currentList) return null;
+    const rows = [...currentList.querySelectorAll(rowSelector)];
+    const currentRow = rows.find(item => key && rowKey(item) === key) || rows[Math.min(index, rows.length - 1)];
+    return currentRow?.querySelector('.decision-heading, .action-card-title, .cell-title') || currentList.closest('[role="tabpanel"]');
+  };
+}
+function captureScrollPosition(element) {
+  const containers = [];
+  for (let parent = element?.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+    if (parent.scrollHeight > parent.clientHeight || parent.scrollWidth > parent.clientWidth) {
+      containers.push({ element: parent, top: parent.scrollTop, left: parent.scrollLeft });
+    }
+  }
+  return { top: window.scrollY, left: window.scrollX, containers };
+}
+function restoreScrollPosition(position) {
+  if (!position) return;
+  position.containers.forEach(({ element, top, left }) => {
+    if (!element.isConnected) return;
+    element.scrollTop = top;
+    element.scrollLeft = left;
+  });
+  window.scrollTo(position.left, position.top);
+}
+function restoreFocus(preferred, alternatives = [], afterRestore) {
   requestAnimationFrame(() => {
-    const target = [preferred, ...alternatives].find(el => el?.isConnected && el.offsetParent !== null && !el.closest('[inert]'));
+    const target = [preferred, ...alternatives].map(candidate => typeof candidate === 'function' ? candidate() : candidate)
+      .find(el => el?.isConnected && el.offsetParent !== null && !el.closest('[inert]'));
     if (target) {
       target.focus({ preventScroll: true });
-      return;
+    } else {
+      const panel = [...document.querySelectorAll('[role="dialog"]')].find(el => !el.closest('[inert]'));
+      const fallback = panel ? focusableElements(panel)[0] || panel : document.querySelector('main');
+      fallback?.focus({ preventScroll: true });
     }
-    const panel = [...document.querySelectorAll('[role="dialog"]')].find(el => !el.closest('[inert]'));
-    const fallback = panel ? focusableElements(panel)[0] || panel : document.querySelector('main');
-    fallback?.focus({ preventScroll: true });
+    afterRestore?.();
   });
 }
 function FocusPanel({ children, className, onClose, label, active = true, restoreOnExit = true }) {
@@ -86,6 +142,7 @@ function FocusPanel({ children, className, onClose, label, active = true, restor
   useEffect(() => {
     if (!active) return;
     const old = document.activeElement;
+    const fallback = listFocusFallback(old);
     const el = ref.current;
     const targets = () => focusableElements(el);
     (el.querySelector("[data-autofocus]") || targets()[0] || el).focus({ preventScroll: true });
@@ -113,7 +170,7 @@ function FocusPanel({ children, className, onClose, label, active = true, restor
     el.addEventListener("keydown", handle);
     return () => {
       el.removeEventListener("keydown", handle);
-      if (restoreOnExit) restoreFocus(old);
+      if (restoreOnExit) restoreFocus(old, [fallback]);
     };
   }, [active, label, restoreOnExit]);
   return <section ref={ref} role={active ? "dialog" : undefined} aria-modal={active ? true : undefined} aria-hidden={!active || undefined} inert={active ? undefined : ""} aria-label={label} tabIndex={-1} className={className}>{children}</section>;
@@ -132,6 +189,7 @@ function App() {
   const [decisionTab, setDecisionTab] = useState("active");
   const [reviewTab, setReviewTab] = useState("records");
   const [showAllActions, setShowAllActions] = useState(false);
+  const [listPages, setListPages] = useState(INITIAL_LIST_PAGES);
   const [onlyAttention, setOnlyAttention] = useState(false);
   const [drawer, setDrawer] = useState(null);
   const [drawerHistory, setDrawerHistory] = useState([]);
@@ -139,10 +197,13 @@ function App() {
   const [toast, setToast] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 640px)').matches);
+  const scrollLocked = Boolean(drawer || modal || mobileOpen);
   const sidebarRef = useRef(null);
   const menuTriggerRef = useRef(null);
   const drawerOpenerRef = useRef(null);
+  const drawerRestoreRef = useRef(null);
   const [storageError, setStorageError] = useState(false);
+  const resetListPages = key => setListPages(current => key ? { ...current, [key]: 1 } : INITIAL_LIST_PAGES);
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const update = () => setSystemDark(media.matches);
@@ -198,12 +259,22 @@ function App() {
       return () => clearTimeout(t);
     }
   }, [toast]);
-  useEffect(() => {
-    document.body.style.overflow = drawer || modal || mobileOpen ? "hidden" : "";
+  useLayoutEffect(() => {
+    if (!scrollLocked) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
-  }, [drawer, modal, mobileOpen]);
+  }, [scrollLocked]);
+  useLayoutEffect(() => {
+    if (scrollLocked || !drawerRestoreRef.current) return;
+    const opener = drawerRestoreRef.current;
+    drawerRestoreRef.current = null;
+    restoreFocus(opener.element, [opener.fallback], () => {
+      if (location.hash === opener.hash && !document.querySelector('.workspace[inert]')) restoreScrollPosition(opener.scroll);
+    });
+  }, [scrollLocked]);
   useLayoutEffect(() => {
     if (!drawer) return;
     const body = document.querySelector('.drawer .drawer-body');
@@ -213,8 +284,10 @@ function App() {
     const f = () => {
       const p = location.hash.slice(2);
       if (labels.page[p]) {
+        drawerRestoreRef.current = null;
         setPage(p);
         setQuery('');
+        resetListPages();
         setDrawer(null);
         setDrawerHistory([]);
         setModal(null);
@@ -225,9 +298,11 @@ function App() {
     return () => window.removeEventListener("hashchange", f);
   }, []);
   const navigate = (p) => {
+    drawerRestoreRef.current = null;
     setPage(p);
     location.hash = "/" + p;
     setQuery("");
+    resetListPages();
     setMobileOpen(false);
     setDrawer(null);
     setDrawerHistory([]);
@@ -239,8 +314,12 @@ function App() {
     setFilters({ component: "all", team: "all", period: "all", platform: "all" });
     setListTab("all");
     setOnlyAttention(false);
+    resetListPages();
   };
-  const filter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
+  const filter = (key, value) => {
+    setFilters((f) => ({ ...f, [key]: value }));
+    resetListPages();
+  };
   const latestDate = Math.max(...data.meetings.map((m) => Date.parse(m.date)));
   const inPeriod = (date) => filters.period === "all" || Date.parse(date) >= latestDate - (Number.parseInt(filters.period) - 1) * 864e5;
   const inScope = (item) => (filters.component === "all" || item.components?.includes(filters.component)) && (filters.team === "all" || item.teams?.includes(filters.team)) && (filters.platform === "all" || item.platforms?.includes(filters.platform));
@@ -248,23 +327,56 @@ function App() {
   const meetings = filteredMeetings.filter((m) => listTab === "all" || listTab === "review" && m.processing === "review" || listTab === "development" && m.kind === "development").sort((a, b) => b.date.localeCompare(a.date));
   const pending = data.decisions.filter((d) => d.verification === "pending");
   const unlinked = data.actions.filter((a) => !["linked", "not_required"].includes(a.jiraState));
-  const decisions = data.decisions.filter((d) => inScope(d) && inPeriod(d.createdAt) && matchText(query, d.title, d.text, d.reason || "", d.scope, ...d.components, ...d.teams) && (decisionTab === "all" || decisionTab === "active" && d.lifecycle === "active" || decisionTab === "pending" && d.verification === "pending")).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const filteredDecisions = data.decisions.filter(d => inScope(d) && inPeriod(d.createdAt) && matchText(query, d.id, d.title, d.text, d.reason || "", d.scope, ...d.components, ...d.teams));
+  const filteredPending = filteredDecisions.filter(d => d.verification === "pending");
+  const decisions = filteredDecisions.filter(d => decisionTab === "all" || decisionTab === "active" && d.lifecycle === "active" || decisionTab === "pending" && d.verification === "pending").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const contextActions = getContextActions(data, filters).filter(a => matchText(query, a.id, a.issueKey || "", ...(a.candidateKeys || []), a.title, a.description, ...a.components));
+  const activeActions = contextActions.filter(a => !['linked', 'not_required'].includes(a.jiraState));
+  const reviewActions = showAllActions ? contextActions : activeActions;
+  const toReview = pending.filter(d => inScope(d) && inPeriod(d.createdAt) && matchText(query, d.id, d.title, d.text));
+  const meetingRange = paginate(meetings, listPages.meetings);
+  const decisionRange = paginate(decisions, listPages.decisions);
+  const reviewRecordRange = paginate(toReview, listPages.reviewRecords);
+  const reviewActionRange = paginate(reviewActions, listPages.reviewActions);
+  useEffect(() => {
+    setListPages(current => {
+      const next = {
+        meetings: Math.min(current.meetings, meetingRange.pageCount),
+        decisions: Math.min(current.decisions, decisionRange.pageCount),
+        reviewRecords: Math.min(current.reviewRecords, reviewRecordRange.pageCount),
+        reviewActions: Math.min(current.reviewActions, reviewActionRange.pageCount)
+      };
+      return Object.keys(next).every(key => next[key] === current[key]) ? current : next;
+    });
+  }, [meetingRange.pageCount, decisionRange.pageCount, reviewRecordRange.pageCount, reviewActionRange.pageCount]);
   const stats = getStats(data, filters).filter((s) => (!onlyAttention || s.attention) && matchText(query, s.component)).sort((a, b) => b.meetingCount - a.meetingCount);
+  const changeListPage = (key, value) => {
+    setListPages(current => ({ ...current, [key]: value }));
+    requestAnimationFrame(() => {
+      const list = document.querySelector('[data-paged-list="' + key + '"]');
+      if (!list || list.closest('[inert]')) return;
+      const target = list.querySelector('.decision-heading, .action-card-title, .cell-title') || list.closest('[role="tabpanel"]');
+      target?.focus({ preventScroll: true });
+      list.scrollIntoView({ block: 'start' });
+    });
+  };
   const openDrawer = next => {
     if (drawer?.type === next.type && drawer?.id === next.id && drawer?.tab === next.tab && drawer?.segmentId === next.segmentId) return;
     if (drawer) {
       const scrollTop = document.querySelector('.drawer .drawer-body')?.scrollTop || 0;
       setDrawerHistory(history => [...history, { ...drawer, scrollTop }]);
     } else {
-      drawerOpenerRef.current = document.activeElement;
+      const opener = document.activeElement;
+      drawerRestoreRef.current = null;
+      drawerOpenerRef.current = { element: opener, fallback: listFocusFallback(opener), scroll: captureScrollPosition(opener), hash: location.hash };
       setDrawerHistory([]);
     }
     setDrawer(next);
   };
   const closeDrawer = () => {
+    drawerRestoreRef.current = drawerOpenerRef.current;
     setDrawer(null);
     setDrawerHistory([]);
-    restoreFocus(drawerOpenerRef.current);
   };
   const backDrawer = () => {
     const previous = drawerHistory.at(-1);
@@ -285,13 +397,10 @@ function App() {
   });
   const verify = (id) => {
     const previousFocus = document.activeElement;
-    const card = previousFocus?.closest('.decision-card');
-    const nextHeading = card?.nextElementSibling?.querySelector('.decision-heading');
-    const previousHeading = card?.previousElementSibling?.querySelector('.decision-heading');
-    const panel = card?.closest('[role="tabpanel"]');
+    const fallback = listFocusFallback(previousFocus);
     updateDecision(id, { verification: "verified", reviewedAt: (/* @__PURE__ */ new Date()).toISOString() });
     setToast("Точность записи подтверждена");
-    restoreFocus(card?.querySelector('.decision-heading') || previousFocus, [nextHeading, previousHeading, panel]);
+    restoreFocus(fallback, [previousFocus]);
   };
   const linkIssue = (actionId, key) => {
     const action = data.actions.find(a => a.id === actionId);
@@ -348,7 +457,7 @@ function App() {
     const topicContext = analytics || page === 'review' && reviewTab === 'actions';
     return <>
       <div className="toolbar">
-        <TextField className="search-field" label="Поиск по тексту" prefix={<Search size={17}/>} placeholder={analytics ? copy.searchAnalytics : page === 'decisions' ? copy.searchDecisions : 'Поиск по названию и содержимому…'} value={query} onChange={e => setQuery(e.target.value)}/>
+        <TextField className="search-field" label="Поиск по тексту" prefix={<Search size={17}/>} placeholder={analytics ? copy.searchAnalytics : page === 'decisions' ? copy.searchDecisions : 'Поиск по названию и содержимому…'} value={query} onChange={e => { setQuery(e.target.value); resetListPages(); }}/>
         <Select className="filter-field" label={copy.singular} options={options(components,copy.all)} value={filters.component} onValueChange={v => filter('component',v)}/>
         <Select className="filter-field" label="Команда" options={options(teams,'Все команды')} value={filters.team} onValueChange={v => filter('team',v)}/>
         <Select className="filter-field" label="Период" options={[{value:'all',label:'Весь период'},{value:'7d',label:'7 дней'},{value:'30d',label:'30 дней'}]} value={filters.period} onValueChange={v => filter('period',v)}/>
@@ -363,7 +472,7 @@ function App() {
     return <><div className="page-header"><div><h1 className="page-title">Встречи</h1><p className="page-description">{copy.pageDescription}</p></div><div className="header-actions"><Button variant="secondary" iconLeft={<CircleHelp size={16} />} onClick={() => setModal({ type: "how" })}>Как это работает</Button><Button variant="primary" iconLeft={<Plus size={16} />} onClick={() => setModal({ type: "import" })}>Импорт встречи</Button></div></div><div className="metrics-strip compact-metrics"><div className="metric"><span className="metric-value">{data.meetings.length}</span><div><div className="metric-label">встреч в журнале</div><div className="metric-note">{copy.meetingNote}</div></div></div><div className="metric"><span className="metric-value">{data.decisions.filter((d) => d.lifecycle === "active" && d.verification === "verified").length}</span><div><div className="metric-label">проверенных решений</div><div className="metric-note">Действующие договорённости</div></div></div><button className="metric metric-action" onClick={() => {
       navigate("review");
       setReviewTab("records");
-    }}><span className="metric-value">{pending.length}</span><div><div className="metric-label">нужно проверить <ArrowUpRight size={14} /></div><div className="metric-note">Сверить формулировки с источником</div></div></button></div>{Toolbar({})}<Tabs label="Список встреч" value={listTab} onChange={setListTab} items={[{ id: "all", label: "Все встречи", count: filteredMeetings.length }, { id: "review", label: "К проверке", count: filteredMeetings.filter((m) => m.processing === "review").length }, { id: "development", label: labels.kind.development }]}><div className="table-wrap"><table className="data-table meetings-table" aria-label="Встречи">
+    }}><span className="metric-value">{pending.length}</span><div><div className="metric-label">нужно проверить <ArrowUpRight size={14} /></div><div className="metric-note">Сверить формулировки с источником</div></div></button></div>{Toolbar({})}<Tabs label="Список встреч" value={listTab} onChange={value => { setListTab(value); resetListPages("meetings"); }} items={[{ id: "all", label: "Все встречи", count: filteredMeetings.length }, { id: "review", label: "К проверке", count: filteredMeetings.filter((m) => m.processing === "review").length }, { id: "development", label: labels.kind.development }]}><div className="table-wrap" data-paged-list="meetings"><table className="data-table meetings-table" aria-label="Встречи">
       <thead><tr>
         <th scope="col" className="meeting-date">Дата</th>
         <th scope="col" className="col-title">Встреча</th>
@@ -373,10 +482,10 @@ function App() {
         <th scope="col" className="meeting-status">Статус</th>
         <th scope="col" className="meeting-open" aria-label="Открыть" />
       </tr></thead>
-      <tbody>{meetings.map((m) => {
+      <tbody>{meetingRange.items.map((m) => {
         const decisionCount = data.decisions.filter((d) => d.source.meetingId === m.id).length;
         const meetingTeams = m.teams.filter((t) => demo.id !== "ds" || t !== "Команда ДС");
-        return <tr key={m.id}>
+        return <tr key={m.id} data-meeting-id={m.id}>
           <td className="date-cell meeting-date"><span>{dateLabel(m.date)}</span><span className="cell-subtitle">{m.duration} мин</span></td>
           <td><div className="title-with-icon">
             <span className="meeting-glyph">{m.kind === "development" ? <Layers3 size={18} /> : <MessageSquareText size={18} />}</span>
@@ -397,13 +506,13 @@ function App() {
           <td className="icon-cell meeting-open"><IconButton variant="ghost" aria-label={"Открыть встречу «" + m.title + "»"} icon={<ChevronRight size={17} />} onClick={() => openMeeting(m.id)} /></td>
         </tr>;
       })}</tbody>
-    </table>{!meetings.length && <Empty onReset={resetFilters} />}</div><div className="table-footer"><span>Показано {meetings.length} из {data.meetings.length}</span></div></Tabs></>;
+    </table>{!meetings.length && <Empty onReset={resetFilters} />}</div><ListPagination range={meetingRange} label="Страницы встреч" onChange={value => changeListPage("meetings", value)}/></Tabs></>;
   }
   function DecisionsPage() {
-    return <><div className="page-header"><div><h1 className="page-title">Решения</h1><p className="page-description">Актуальные договорённости, их основания и история изменений.</p></div><Status tone="info">{data.decisions.length} записей</Status></div>{Toolbar({})}<Tabs label="Список решений" value={decisionTab} onChange={setDecisionTab} items={[{ id: "active", label: "Актуальные" }, { id: "pending", label: "Проверить запись", count: pending.length }, { id: "all", label: "Вся история" }]}><div className="decision-list">{decisions.map((d) => renderDecisionCard({ item: d }))}</div>{!decisions.length && <Empty onReset={() => {
+    return <><div className="page-header"><div><h1 className="page-title">Решения</h1><p className="page-description">Актуальные договорённости, их основания и история изменений.</p></div><Status tone="info">{data.decisions.length} записей</Status></div>{Toolbar({})}<Tabs label="Список решений" value={decisionTab} onChange={value => { setDecisionTab(value); resetListPages("decisions"); }} items={[{ id: "active", label: "Актуальные" }, { id: "pending", label: "Проверить запись", count: filteredPending.length }, { id: "all", label: "Вся история" }]}><div className="decision-list" data-paged-list="decisions">{decisionRange.items.map((d) => renderDecisionCard({ item: d }))}</div>{!decisions.length && <Empty onReset={() => {
       resetFilters();
       setDecisionTab("all");
-    }} />}<p className="page-note"><ShieldCheck size={15} /> «Проверено» означает, что запись точно передаёт встречу. Это отдельный статус от актуальности решения.</p></Tabs></>;
+    }} />}<ListPagination range={decisionRange} label="Страницы решений" onChange={value => changeListPage("decisions", value)}/><p className="page-note"><ShieldCheck size={15} /> «Проверено» означает, что запись точно передаёт встречу. Это отдельный статус от актуальности решения.</p></Tabs></>;
   }
   function renderActionCard({ a }) {
     const issue = a.jiraState === 'linked' && data.jiraIssues.find(i => i.key === a.issueKey);
@@ -412,7 +521,7 @@ function App() {
     const jiraContext = jiraCheckContext(a);
     return <article key={a.id} className="action-card" data-action-id={a.id}>
       <div className="row-between"><span className="mono small muted">{a.id}</span><Status tone={jiraTone[a.jiraState]}>{labels.jira[a.jiraState]}</Status></div>
-      <h3 className="action-card-title">{a.title}</h3>
+      <h3 className="action-card-title" tabIndex={-1}>{a.title}</h3>
       <p className="small muted">{a.description}</p>
       <div className="action-card-meta"><Tags values={a.components}/><span className="small muted">{a.teams.join(' · ')}</span></div>
       {issue && <div className="candidate-card"><div><span className="mono small">{issue.key}</span><p className="candidate-title">{issue.title}</p><span className="small muted">{issue.status} · {issue.assignee}</span></div><CheckCheck size={18}/></div>}
@@ -431,24 +540,22 @@ function App() {
     </article>;
   }
   function ReviewPage() {
-    const contextActions = getContextActions(data, filters).filter(a => matchText(query, a.title, a.description, ...a.components));
-    const activeActions = contextActions.filter(a => !['linked','not_required'].includes(a.jiraState));
-    const actions = showAllActions ? contextActions : activeActions;
-    const toReview = pending.filter(d => inScope(d) && inPeriod(d.createdAt) && matchText(query,d.title,d.text));
     const sliceResolved = !showAllActions && contextActions.length > 0 && !activeActions.length;
     return <>
       <div className="page-header"><div><h1 className="page-title">К разбору</h1><p className="page-description">Проверьте записи и определите, что делать дальше.</p></div><Status tone="warning">{toReview.length + activeActions.length} {plural(toReview.length + activeActions.length,['элемент','элемента','элементов'])} по фильтрам</Status></div>
       {Toolbar({})}
-      <Tabs label="Очередь разбора" value={reviewTab} onChange={setReviewTab} items={[{id:'records',label:'Проверить записи',count:toReview.length},{id:'actions',label:'Действия и Jira',count:activeActions.length}]}>
+      <Tabs label="Очередь разбора" value={reviewTab} onChange={value => { setReviewTab(value); resetListPages(value === "records" ? "reviewRecords" : "reviewActions"); }} items={[{id:'records',label:'Проверить записи',count:toReview.length},{id:'actions',label:'Действия и Jira',count:activeActions.length}]}>
       {reviewTab === 'records' ? <>
         <Notice>AI подготовил записи по расшифровке. Сверьте формулировку с источником — кнопка «Запись верна» подтверждает точность извлечения.</Notice>
-        <div className="decision-list">{toReview.map(d => renderDecisionCard({ item: d }))}</div>
+        <div className="decision-list" data-paged-list="reviewRecords">{reviewRecordRange.items.map(d => renderDecisionCard({ item: d }))}</div>
         {!toReview.length && <Empty title={pending.length ? 'Нет записей по фильтрам' : 'Все записи проверены'} text={pending.length ? 'Измените запрос или сбросьте фильтры.' : 'Новые извлечения появятся здесь после обработки встреч.'} onReset={pending.length ? resetFilters : undefined}/>}
+        <ListPagination range={reviewRecordRange} label="Страницы записей к проверке" onChange={value => changeListPage("reviewRecords", value)}/>
       </> : <>
         <Notice>Jira работает в демонстрационном режиме. Кандидаты и задачи вымышлены; все действия сохраняются только в этом браузере.</Notice>
-        <div className="row-between section-caption"><span className="muted small">{actions.length} {plural(actions.length,['действие','действия','действий'])}</span><Checkbox label="Показывать разобранные" checked={showAllActions} onCheckedChange={setShowAllActions}/></div>
-        <div className="review-grid">{actions.map(a => renderActionCard({ a }))}</div>
-        {!actions.length && <Empty title={sliceResolved ? 'Действия в этом срезе разобраны' : unlinked.length || showAllActions ? 'Нет действий по фильтрам' : 'Очередь разобрана'} text={sliceResolved ? 'Включите «Показывать разобранные», чтобы посмотреть или изменить результат.' : unlinked.length || showAllActions ? 'Измените запрос или сбросьте фильтры.' : 'Все действия связаны с задачами или отмечены как не требующие задачи.'} onReset={!sliceResolved && (unlinked.length || showAllActions) ? resetFilters : undefined}/>}
+        <div className="row-between section-caption"><span className="muted small">{reviewActions.length} {plural(reviewActions.length,['действие','действия','действий'])}</span><Checkbox label="Показывать разобранные" checked={showAllActions} onCheckedChange={value => { setShowAllActions(value); resetListPages("reviewActions"); }}/></div>
+        <div className="review-grid" data-paged-list="reviewActions">{reviewActionRange.items.map(a => renderActionCard({ a }))}</div>
+        {!reviewActions.length && <Empty title={sliceResolved ? 'Действия в этом срезе разобраны' : unlinked.length || showAllActions ? 'Нет действий по фильтрам' : 'Очередь разобрана'} text={sliceResolved ? 'Включите «Показывать разобранные», чтобы посмотреть или изменить результат.' : unlinked.length || showAllActions ? 'Измените запрос или сбросьте фильтры.' : 'Все действия связаны с задачами или отмечены как не требующие задачи.'} onReset={!sliceResolved && (unlinked.length || showAllActions) ? resetFilters : undefined}/>}
+        <ListPagination range={reviewActionRange} label="Страницы действий" onChange={value => changeListPage("reviewActions", value)}/>
       </>}</Tabs>
     </>;
   }
@@ -473,7 +580,7 @@ function App() {
     const ts = data.topics.filter((t) => t.components.includes(name));
     const ms = data.meetings.filter((m) => m.components.includes(name)).sort((a, b) => b.date.localeCompare(a.date));
     const s = getStats(data, filters).find((x) => x.component === name);
-    return <><div className="drawer-header"><div><div className="drawer-eyebrow">{copy.historyTitle}</div><h2 className="drawer-title">{name}</h2></div><IconButton variant="ghost" aria-label={copy.closeDetail} icon={<X size={20} />} onClick={closeDrawer} /></div><div className="drawer-body">{s?.attention && <Notice tone="warning"><strong>Требует внимания</strong><p className="small">Основания по выбранным фильтрам.</p><ul>{s.attentionReasons.map((r, i) => <li key={i}>{r}</li>)}</ul></Notice>}<h3 className="section-title section-caption">Темы и проблемы за всё время</h3>{ts.map((t) => <article className="topic-card" key={t.id}><div className="row-between"><Status tone={t.type === "problem" ? "warning" : "neutral"}>{labels.topic[t.type]}</Status><Status>{t.status === "open" ? "Открыто" : "Закрыто"}</Status></div><h4>{t.title}</h4><p className="small muted">{t.teams.join(" · ")} · {t.meetingIds.length} {plural(t.meetingIds.length, ["встреча", "встречи", "встреч"])}</p>{t.attention && <p className="attention-note small">{t.attentionReason || "Ручная отметка: требует внимания"}</p>}<Button size="s" variant="ghost" iconLeft={<CircleDot size={13} />} onClick={() => {
+    return <><div className="drawer-header"><div><div className="drawer-eyebrow">{copy.historyTitle}</div><h2 className="drawer-title">{name}</h2></div><IconButton variant="ghost" aria-label={copy.closeDetail} icon={<X size={20} />} onClick={closeDrawer} /></div><div className="drawer-body component-drawer-body">{s?.attention && <Notice tone="warning"><strong>Требует внимания</strong><p className="small">Основания по выбранным фильтрам.</p><ul>{s.attentionReasons.map((r, i) => <li key={i}>{r}</li>)}</ul></Notice>}<h3 className="section-title section-caption">Темы и проблемы за всё время</h3>{ts.map((t) => <article className="topic-card" key={t.id}><div className="row-between"><Status tone={t.type === "problem" ? "warning" : "neutral"}>{labels.topic[t.type]}</Status><Status>{t.status === "open" ? "Открыто" : "Закрыто"}</Status></div><h4>{t.title}</h4><p className="small muted">{t.teams.join(" · ")} · {t.meetingIds.length} {plural(t.meetingIds.length, ["встреча", "встречи", "встреч"])}</p>{t.attention && <p className="attention-note small">{t.attentionReason || "Ручная отметка: требует внимания"}</p>}<Button size="s" variant="ghost" iconLeft={<CircleDot size={13} />} onClick={() => {
       if (t.attention) {
         setData((d) => ({ ...d, topics: d.topics.map((x) => x.id === t.id ? { ...x, attention: false, attentionReason: "" } : x) }));
         setToast("Ручная отметка снята. Автоматические сигналы сохраняются.");

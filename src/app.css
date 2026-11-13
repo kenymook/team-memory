@@ -247,6 +247,11 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .empty-state p { max-width: 370px; margin: 0; font-size: 13px; line-height: 20px; }
 .empty-state .ui-button { margin-top: 7px; }
 .table-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 13px; color: var(--text-tertiary); font-size: 11px; line-height: 18px; }
+[data-paged-list] { scroll-margin-top: 64px; }
+.list-pagination { flex-wrap: wrap; }
+.pagination-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.pagination-controls .ui-button { padding-inline: 8px; gap: 4px; font-size: 12px; }
+.pagination-page { min-width: 42px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .page-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 20px; color: var(--text-tertiary); font-size: 11px; line-height: 18px; }
 .page-note svg { width: 14px; height: 14px; margin-top: 2px; }
 
@@ -355,6 +360,8 @@ svg { flex-shrink: 0; vertical-align: middle; }
 .drawer-body { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 24px 28px 32px; }
 .drawer-body > :first-child { margin-top: 0; }
 .drawer-body > .section-title { margin-top: 25px; }
+.drawer-body.component-drawer-body { padding-top: 0; }
+.component-drawer-body > .section-title:first-child { margin-top: 0; }
 .drawer-body .decision-card { padding: 16px; }
 .drawer-footer { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 16px 28px; border-top: 1px solid var(--border-default); background: var(--surface-base); flex-shrink: 0; }
 .drawer-tabs { flex-shrink: 0; margin: 0; padding: 0 28px; border-bottom: 1px solid var(--border-default); }

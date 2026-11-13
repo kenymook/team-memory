@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cloneSeed, getContextActions, getStats, enrichDemoIssueDetails, isValidCalendarDate } from '../src/domain.js';
+import { cloneSeed, baseSeed, getContextActions, getStats, enrichDemoIssueDetails, isValidCalendarDate } from '../src/domain.js';
 
 const onlyStat = (data, filters) => getStats(data, filters)[0];
 const actionIds = (data, filters) => getContextActions(data, filters).map((action) => action.id);
 
 test('Select discussion in the last 7 days retains the older action in both analytics and queue', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   const filters = { component: 'Select', period: '7d' };
   assert.deepEqual(actionIds(data, filters), ['ACT-002']);
   const stat = onlyStat(data, filters);
@@ -17,7 +17,7 @@ test('Select discussion in the last 7 days retains the older action in both anal
 });
 
 test('mixed meeting tags do not leak another topic’s platform or team into actions or analytics', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   for (const filters of [
     { component: 'TextField', platform: 'Android' },
     { component: 'TextField', team: 'Каталог' },
@@ -33,7 +33,7 @@ test('mixed meeting tags do not leak another topic’s platform or team into act
 });
 
 test('repeat discussions count once as a problem and development is not a consumer defect', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   const textField = onlyStat(data, { component: 'TextField' });
   assert.deepEqual([textField.meetingCount, textField.problemCount, textField.affectedTeams], [3, 1, 2]);
   const button = onlyStat(data, { component: 'Button' });
@@ -41,7 +41,7 @@ test('repeat discussions count once as a problem and development is not a consum
 });
 
 test('period includes the seventh day and uses the latest meeting as its reference', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   assert.deepEqual(actionIds(data, { component: 'Table', period: '7d' }), ['ACT-004']); // Nov 6–12.
   assert.equal(onlyStat(data, { component: 'TextField', period: '7d' }).meetingCount, 1); // Nov 5 excluded.
   data.meetings.push({ id: 'new-snapshot', date: '2026-12-01', components: [], teams: [], platforms: [] });
@@ -49,7 +49,7 @@ test('period includes the seventh day and uses the latest meeting as its referen
 });
 
 test('linking and reopening an action update analytics without losing it from the shared context', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   const filters = { component: 'Select', period: '7d' };
   const action = data.actions.find((item) => item.id === 'ACT-002');
   action.jiraState = 'linked';
@@ -65,14 +65,14 @@ test('linking and reopening an action update analytics without losing it from th
 });
 
 test('resolved actions remain available for the review queue’s show-resolved option', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   assert.deepEqual(actionIds(data, { component: 'Tooltip', team: 'Поддержка', period: '7d' }), ['ACT-006']);
   assert.equal(onlyStat(data, { component: 'Tooltip' }).openActions, 0);
   assert.equal(getContextActions(data).length, 6);
 });
 
 test('old saved demo issues receive descriptions without changing existing edits or linked actions', () => {
-  const data = cloneSeed();
+  const data = cloneSeed(baseSeed);
   delete data.jiraIssues[0].description;
   delete data.jiraIssues[0].acceptance;
   data.jiraIssues[1].description = 'Пользовательское уточнение';
@@ -80,7 +80,7 @@ test('old saved demo issues receive descriptions without changing existing edits
   data.jiraIssues[1].status = 'Готово';
   data.jiraIssues.push({ key: 'DEMO-200', title: 'Созданная в браузере задача', description: 'Сохранить это описание' });
   const before = structuredClone(data);
-  const enriched = enrichDemoIssueDetails(data);
+  const enriched = enrichDemoIssueDetails(data, baseSeed);
   assert.ok(enriched.jiraIssues[0].description.length > 50);
   assert.equal(enriched.jiraIssues[0].acceptance.length, 3);
   assert.equal(enriched.jiraIssues[1].description, 'Пользовательское уточнение');

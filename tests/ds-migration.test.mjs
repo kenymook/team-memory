@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cloneSeed, seed, enrichDemoData, getStats, getContextActions } from '../src/domain.js';
+import { cloneSeed, baseSeed as seed, enrichDemoData, getStats, getContextActions } from '../src/domain.js';
 import { bankSeed } from '../src/bank-demo.js';
 
 // Values persisted by the previous published DS demo, before this upgrade.
@@ -41,7 +41,7 @@ const legacyCopy = {
 const byId = (items, id) => items.find((item) => item.id === id);
 
 function previousSavedData() {
-  const data = cloneSeed();
+  const data = cloneSeed(seed);
   for (const meeting of data.meetings) delete meeting.participants;
   for (const [collection, records] of Object.entries(legacyCopy)) {
     for (const [id, fields] of Object.entries(records)) {
@@ -94,7 +94,7 @@ test('previously saved DS demo gets participants and corrected copy while retain
     assert.deepEqual(getContextActions(upgraded, filters), getContextActions(before, filters));
   }
   assert.deepEqual(saved, before, 'Loading does not mutate the stored object');
-  assert.deepEqual(enrichDemoData(upgraded), upgraded, 'Repeated loads are idempotent');
+  assert.deepEqual(enrichDemoData(upgraded, seed), upgraded, 'Repeated loads are idempotent');
   upgraded.meetings[0].participants[0].name = 'Локальное изменение';
   assert.notEqual(seed.meetings[0].participants[0].name, 'Локальное изменение', 'Enriched participants do not share mutable seed objects');
 });
@@ -110,7 +110,7 @@ test('custom text, explicit empty participants and imported records survive the 
   byId(saved.decisions, 'DEC-010').scope = '';
   saved.meetings.push({ id: 'imported-m1', title: 'Встреча пользователя', summary: legacyCopy.meetings.m8.summary });
   const before = structuredClone(saved);
-  const upgraded = enrichDemoData(saved);
+  const upgraded = enrichDemoData(saved, seed);
   for (const id of ['m1', 'm2', 'm3']) {
     assert.deepEqual(byId(upgraded.meetings, id).participants, byId(before.meetings, id).participants);
   }

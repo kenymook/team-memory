@@ -1,6 +1,8 @@
 // All meetings, quotations, decisions, teams' situations, and Jira issues below
 // are fictional demonstration data. They are not records of real discussions.
 
+import { dsScalePack } from './ds-scale-demo.js';
+
 export const components = ['TextField', 'Select', 'Button', 'Modal', 'Table', 'Tooltip'];
 export const teams = ['Команда ДС', 'Личный кабинет', 'Платежи', 'Каталог', 'Поддержка'];
 export const platforms = ['Web', 'Android', 'iOS'];
@@ -18,7 +20,7 @@ const designParticipants = {
 };
 const meetingParticipants = (...keys) => keys.map(key => ({ ...designParticipants[key] }));
 
-export const seed = {
+export const baseSeed = {
   meetings: [
     {
       id: 'm1', title: 'TextField: ошибка во время ввода с маской', date: '2026-10-23', duration: 28,
@@ -176,6 +178,22 @@ export const seed = {
   ],
 };
 
+const demoCollections = ['meetings', 'topics', 'decisions', 'actions', 'jiraIssues'];
+const recordKey = collection => collection === 'jiraIssues' ? 'key' : 'id';
+const packRecords = Object.fromEntries(demoCollections.map(collection => [collection,
+  dsScalePack[collection].map(record => ({
+    ...record,
+    demoPackId: dsScalePack.id,
+    demoPackRecordId: record[recordKey(collection)],
+  })),
+]));
+
+export const seed = {
+  ...baseSeed,
+  ...Object.fromEntries(demoCollections.map(collection => [collection, [...baseSeed[collection], ...packRecords[collection]]])),
+  demoDataPacks: [dsScalePack.id],
+};
+
 export function cloneSeed(basis = seed) {
   return JSON.parse(JSON.stringify(basis));
 }
@@ -189,6 +207,8 @@ export function enrichDemoIssueDetails(data, basis = seed) {
     jiraIssues: data.jiraIssues.map((issue) => {
       const known = details.get(issue.key);
       if (!known) return issue;
+      // A user-created issue may already occupy a newly introduced demo key.
+      if (known.demoPackId && (issue.demoPackId !== known.demoPackId || issue.demoPackRecordId !== known.demoPackRecordId)) return issue;
       return {
         ...issue,
         description: issue.description ?? known.description,
@@ -258,19 +278,90 @@ const previousDesignCopy = {
   }
 };
 
-/** Add selected-scenario metadata and correct unchanged legacy demo copy. */
+/** Append a selected scenario's one-time data pack without changing saved records. */
+function addDemoDataPack(data, basis) {
+  if (!Array.isArray(basis?.demoDataPacks) || !basis.demoDataPacks.includes(dsScalePack.id)
+    || (Array.isArray(data?.demoDataPacks) && data.demoDataPacks.includes(dsScalePack.id))
+    || !demoCollections.every(collection => Array.isArray(data?.[collection]))) return data;
+
+  const incoming = cloneSeed(packRecords);
+  const aliases = {};
+  const additions = {};
+  for (const collection of demoCollections) {
+    const key = recordKey(collection);
+    const existing = new Map(data[collection].map(record => [record[key], record]));
+    const owned = new Map(data[collection].filter(record => record.demoPackId === dsScalePack.id)
+      .map(record => [record.demoPackRecordId, record]));
+    const reserved = new Set([...existing.keys(), ...incoming[collection].map(record => record[key])]);
+    const prefix = { decisions: 'DEC-', actions: 'ACT-', jiraIssues: 'DEMO-' }[collection];
+    let nextNumber = prefix ? Math.max(0, ...[...reserved].filter(value => typeof value === 'string' && value.startsWith(prefix))
+      .map(value => Number(value.slice(prefix.length))).filter(Number.isFinite)) + 1 : 1;
+    const allocate = original => {
+      let value;
+      do {
+        value = prefix ? prefix + String(nextNumber++).padStart(collection === 'jiraIssues' ? 1 : 3, '0')
+          : `${original}-demo-${nextNumber++}`;
+      } while (reserved.has(value));
+      reserved.add(value);
+      return value;
+    };
+    aliases[collection] = new Map();
+    additions[collection] = [];
+    for (const record of incoming[collection]) {
+      const previous = owned.get(record.demoPackRecordId);
+      if (previous) {
+        aliases[collection].set(record[key], previous[key]);
+        continue;
+      }
+      const original = record[key];
+      const resolved = existing.has(original) ? allocate(original) : original;
+      aliases[collection].set(original, resolved);
+      additions[collection].push({ ...record, [key]: resolved });
+    }
+  }
+
+  const resolve = (collection, id) => aliases[collection].get(id) ?? id;
+  const source = value => value ? { ...value, meetingId: resolve('meetings', value.meetingId) } : value;
+  for (const meeting of additions.meetings) meeting.topicIds = meeting.topicIds.map(id => resolve('topics', id));
+  for (const topic of additions.topics) topic.meetingIds = topic.meetingIds.map(id => resolve('meetings', id));
+  for (const decision of additions.decisions) {
+    decision.topicId = resolve('topics', decision.topicId);
+    decision.source = source(decision.source);
+    decision.supersedes = resolve('decisions', decision.supersedes);
+    decision.actionIds = decision.actionIds.map(id => resolve('actions', id));
+  }
+  for (const action of additions.actions) {
+    action.topicId = resolve('topics', action.topicId);
+    action.decisionId = resolve('decisions', action.decisionId);
+    action.source = source(action.source);
+    action.issueKey = resolve('jiraIssues', action.issueKey);
+    action.candidateKeys = action.candidateKeys.map(key => resolve('jiraIssues', key));
+  }
+  for (const issue of additions.jiraIssues) {
+    if (issue.decisionId) issue.decisionId = resolve('decisions', issue.decisionId);
+    if (issue.source) issue.source = source(issue.source);
+  }
+  return {
+    ...data,
+    ...Object.fromEntries(demoCollections.map(collection => [collection, [...data[collection], ...additions[collection]]])),
+    demoDataPacks: [...(Array.isArray(data.demoDataPacks) ? data.demoDataPacks : []), dsScalePack.id],
+  };
+}
+
+/** Upgrade only the selected demo, preserving edits, statuses and user records. */
 export function enrichDemoData(data, basis = seed) {
-  let enriched = enrichDemoIssueDetails(data, basis);
+  let enriched = enrichDemoIssueDetails(addDemoDataPack(data, basis), basis);
   if (!enriched || typeof enriched !== 'object') return enriched;
   for (const collection of ['meetings', 'decisions']) {
     if (!Array.isArray(enriched[collection])) continue;
     const knownById = new Map((basis?.[collection] || []).map(item => [item.id, item]));
-    const designById = new Map(seed[collection].map(item => [item.id, item]));
+    const designById = new Map(baseSeed[collection].map(item => [item.id, item]));
     enriched = {
       ...enriched,
       [collection]: enriched[collection].map(item => {
         const known = knownById.get(item.id);
         if (!known) return item;
+        if (known.demoPackId && (item.demoPackId !== known.demoPackId || item.demoPackRecordId !== known.demoPackRecordId)) return item;
         let next = item;
         if (collection === 'meetings' && item.participants === undefined && Array.isArray(known.participants)) {
           next = { ...next, participants: known.participants.map(person => ({ ...person })) };
