@@ -1,6 +1,6 @@
 # Third-party notices
 
-This prototype includes the following third-party software. Vendored SEDA source provenance is documented in `vendor/seda-ui/PROVENANCE.json`; no new license is assigned to that source by this repository.
+This prototype includes the following third-party software. The license texts below apply to the named dependencies.
 
 ## react 18.3.1
 

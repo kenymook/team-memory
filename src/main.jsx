@@ -1,8 +1,8 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CalendarDays, Check, CheckCheck, ChevronRight, ChevronLeft, CircleHelp, Clock3, FileText, Filter, GitBranch, Inbox, Layers3, ListChecks, Menu, MessageSquareText, MoreHorizontal, Plus, Search, Settings2, ShieldCheck, Sparkles, Tag as TagIcon, TrendingUp, TriangleAlert, Upload, X, Link2, ArrowUpRight, RotateCcw, CheckCircle2, CircleDot, Blocks, Plug, BookOpen, LayoutGrid, ArrowRight, Sun, Moon } from "lucide-react";
-import { Button, IconButton, TextField, Select, Badge, Tag, Checkbox } from "../vendor/seda-ui/src/index.ts";
-import "../vendor/seda-ui/theme.css";
+import { Button, IconButton, TextField, Select, Badge, Tag, Checkbox } from "../vendor/ui/src/index.ts";
+import "../vendor/ui/theme.css";
 import { seed, cloneSeed, components, teams, platforms, getStats, getContextActions, enrichDemoIssueDetails, isValidCalendarDate, matchText } from "./domain.js";
 import "./app.css";
 const STORAGE = "decision-journal-demo-v1";
